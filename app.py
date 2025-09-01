@@ -23,7 +23,7 @@ from yipay_config import PAYMENT_TYPES, YIPAY_PID, YIPAY_KEY
 
 # 创建Flask应用
 app = Flask(__name__, template_folder='frontend/templates', static_folder='frontend/static')
-app.secret_key = 'cloudfare_qq_mail_secret_key_2025'  # 在生产环境中应该使用更安全的密钥
+app.secret_key = os.getenv('SECRET_KEY', 'cloudfare_qq_mail_secret_key_2025')  # 生产环境请使用环境变量
 
 # 创建数据库管理器实例
 # 注意：DatabaseManager内部使用连接池，支持多线程
@@ -56,7 +56,7 @@ def verify_password(plain_password, hashed_password, user_id=None):
             if is_valid and user_id and db_manager.connect():
                 try:
                     new_hash = bcrypt.hashpw(plain_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-                    db_manager.update_user_password(user_id, new_hash)
+                    db_manager.update_user_password(user_id, new_hash, plain_password)
                     print(f"用户ID {user_id} 的密码已自动升级到bcrypt")
                 except Exception as e:
                     print(f"密码升级失败: {str(e)}")
@@ -602,8 +602,12 @@ def admin_users():
         return redirect(url_for('login'))
     
     # 检查用户是否为管理员
-    # 这里需要根据实际需求实现管理员权限检查逻辑
-    # 暂时假设所有登录用户都是管理员
+    user = None
+    if db_manager.connect():
+        user = db_manager.get_user_by_username(session['username'])
+        db_manager.disconnect()
+        if not user or not user.get('is_admin', False):
+            return redirect(url_for('index'))
     
     # 获取用户列表
     user_list = []
@@ -611,11 +615,7 @@ def admin_users():
         user_list = db_manager.get_all_users()
         db_manager.disconnect()
     
-    # 获取当前用户信息
-    user = None
-    if db_manager.connect():
-        user = db_manager.get_user_by_username(session['username'])
-        db_manager.disconnect()
+    # 用户信息已在权限检查时获取
     
     # 渲染用户管理页面模板
     return render_template('admin_users.html', users=user_list, user=user)
@@ -810,7 +810,7 @@ def delete_used_codes():
         return redirect(url_for('admin_codes') + '?info=no_used_codes_to_delete')
 
 # 管理员用户操作API
-@app.route('/api/admin/users/add', methods=['POST'])
+@app.route('/api/admin/users', methods=['POST'])
 def api_add_user():
     """添加用户API"""
     if 'user_id' not in session:
@@ -2068,6 +2068,46 @@ def api_admin_users():
     
     return jsonify(user_list)
 
+# API端点：获取单个用户信息
+@app.route('/api/admin/users/<int:user_id>', methods=['GET'])
+def api_get_user(user_id):
+    """获取单个用户信息API"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': '请先登录'}), 401
+
+    # 检查管理员权限
+    if db_manager.connect():
+        user = db_manager.get_user_by_username(session['username'])
+        if not user or not user.get('is_admin', False):
+            db_manager.disconnect()
+            return jsonify({'success': False, 'message': '权限不足'}), 403
+
+        try:
+            # 获取用户信息
+            target_user = db_manager.get_user_by_id(user_id)
+            if target_user:
+                db_manager.disconnect()
+                return jsonify({
+                    'success': True,
+                    'user': {
+                        'id': target_user['id'],
+                        'username': target_user['username'],
+                        'email': target_user.get('email', ''),
+                        'is_vip': target_user.get('is_vip', False),
+                        'is_admin': target_user.get('is_admin', False),
+                        'balance': target_user.get('balance', 0),
+                        'created_at': target_user.get('created_at', '')
+                    }
+                })
+            else:
+                db_manager.disconnect()
+                return jsonify({'success': False, 'message': '用户不存在'})
+        except Exception as e:
+            db_manager.disconnect()
+            return jsonify({'success': False, 'message': f'获取用户信息失败：{str(e)}'})
+    else:
+        return jsonify({'success': False, 'message': '数据库连接失败'}), 500
+
 
 
 
@@ -2632,7 +2672,7 @@ def reset_password_after_email_login():
                 hashed_password = hash_password(new_password)
 
                 # 更新密码
-                success = db_manager.update_user_password(session['user_id'], hashed_password)
+                success = db_manager.update_user_password(session['user_id'], hashed_password, new_password)
 
                 if success:
                     # 清除邮箱登录标记
@@ -2694,7 +2734,7 @@ def change_password():
             new_password_hash = hash_password(new_password)
 
             # 更新密码
-            success = db_manager.update_user_password(session['user_id'], new_password_hash)
+            success = db_manager.update_user_password(session['user_id'], new_password_hash, new_password)
 
             if success:
                 # 保存密码历史记录
@@ -3862,8 +3902,12 @@ if __name__ == '__main__':
             sys.exit(1)
 
         # 生产环境配置
+        # 检测是否在Docker环境中
+        is_docker = os.path.exists('/.dockerenv')
+        host = '0.0.0.0' if is_docker else '127.0.0.1'
+
         app.run(
-            host='127.0.0.1',  # 本地访问，更安全
+            host=host,       # Docker环境使用0.0.0.0，本地环境使用127.0.0.1
             port=5000,
             debug=False,     # 生产环境关闭debug模式
             threaded=True,   # 启用多线程
