@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注册码管理 - 邮箱服务</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- 自定义CSS -->
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fas fa-envelope"></i> 邮箱服务
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('mails') }}">
+                            <i class="fas fa-inbox"></i> 邮件列表
+                        </a>
+                    </li>
+                    {% if user and user.is_vip %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-cog"></i> 管理
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('admin_users') }}"><i class="fas fa-users"></i> 用户管理</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin_domains') }}"><i class="fas fa-globe"></i> 域名管理</a></li>
+                            <li><a class="dropdown-item active" href="{{ url_for('admin_codes') }}"><i class="fas fa-key"></i> 码管理</a></li>
+                        </ul>
+                    </li>
+                    {% endif %}
+                </ul>
+                
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user"></i> {{ user.username if user else '用户' }}
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('profile') }}"><i class="fas fa-user-circle"></i> 个人资料</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> 退出登录</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容 -->
+    <main class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <!-- 页面标题 -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h1><i class="fas fa-key"></i> 码管理</h1>
+                        <p>管理系统中的注册码和充值码。</p>
+                    </div>
+                    <div id="actionButtons">
+                        <!-- 注册码操作按钮 -->
+                        <div id="regCodeActions">
+                            <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#generateModal">
+                                <i class="fas fa-plus"></i> 生成注册码
+                            </button>
+                            <button type="button" class="btn btn-info me-2" onclick="copyAllUnusedRegCodes()" title="复制所有未使用的注册码">
+                                <i class="fas fa-copy"></i> 复制未使用
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="confirmDeleteUsedCodes()" title="删除所有已使用的注册码">
+                                <i class="fas fa-trash-alt"></i> 清理已使用
+                            </button>
+                        </div>
+
+                        <!-- 充值码操作按钮 -->
+                        <div id="rechargeCodeActions" style="display: none;">
+                            <div class="btn-group me-2">
+                                <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
+                                    <i class="fas fa-plus"></i> 生成充值码
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#" onclick="generateRechargeCodes(1)">¥1 充值码</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="generateRechargeCodes(5)">¥5 充值码</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="generateRechargeCodes(10)">¥10 充值码</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="generateRechargeCodes(20)">¥20 充值码</a></li>
+                                </ul>
+                            </div>
+                            <div class="btn-group me-2">
+                                <button type="button" class="btn btn-info dropdown-toggle" data-bs-toggle="dropdown">
+                                    <i class="fas fa-copy"></i> 复制未使用
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#" onclick="copyUnusedRechargeCodes(1)">复制 ¥1 充值码</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="copyUnusedRechargeCodes(5)">复制 ¥5 充值码</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="copyUnusedRechargeCodes(10)">复制 ¥10 充值码</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="copyUnusedRechargeCodes(20)">复制 ¥20 充值码</a></li>
+                                </ul>
+                            </div>
+                            <button type="button" class="btn btn-secondary" onclick="confirmDeleteUsedRechargeCodes()" title="删除所有已使用的充值码">
+                                <i class="fas fa-trash-alt"></i> 清理已使用
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 切换面板按钮 -->
+                <div class="mb-4">
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-primary" id="regCodesTab" onclick="switchTab('registration')">
+                            <i class="fas fa-user-plus"></i> 注册码管理
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" id="rechargeCodesTab" onclick="switchTab('recharge')">
+                            <i class="fas fa-coins"></i> 充值码管理
+                        </button>
+                    </div>
+                    <div class="ms-3 d-inline-block">
+                        <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#xianyuLinksModal">
+                            <i class="fas fa-link"></i> 配置咸鱼链接
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 成功/错误消息 -->
+                {% if request.args.get('success') %}
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    {% if 'generated' in request.args.get('success') %}
+                        <i class="fas fa-check-circle"></i> 注册码生成成功！
+                    {% elif 'code_deleted' in request.args.get('success') %}
+                        <i class="fas fa-check-circle"></i> 注册码删除成功！
+                    {% elif 'deleted_' in request.args.get('success') and 'used_codes' in request.args.get('success') %}
+                        <i class="fas fa-check-circle"></i> 已成功删除所有已使用的注册码！
+                    {% endif %}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endif %}
+
+                {% if request.args.get('error') %}
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-circle"></i> 操作失败，请重试。
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endif %}
+
+                {% if request.args.get('info') %}
+                <div class="alert alert-info alert-dismissible fade show" role="alert">
+                    {% if 'no_used_codes_to_delete' in request.args.get('info') %}
+                        <i class="fas fa-info-circle"></i> 没有已使用的注册码需要删除。
+                    {% endif %}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endif %}
+                
+                <!-- 注册码列表 -->
+                <div id="regCodesPanel" class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>注册码</th>
+                                        <th>描述</th>
+                                        <th>创建者</th>
+                                        <th>创建时间</th>
+                                        <th>状态</th>
+                                        <th>使用者</th>
+                                        <th>使用时间</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for code in codes %}
+                                    <tr>
+                                        <td>
+                                            <code class="text-primary">{{ code.code }}</code>
+                                            <button class="btn btn-sm btn-outline-secondary ms-2" onclick="copyToClipboard('{{ code.code }}')" title="复制注册码">
+                                                <i class="fas fa-copy"></i>
+                                            </button>
+                                        </td>
+                                        <td>{{ code.description or '无描述' }}</td>
+                                        <td>{{ code.created_by_username or '系统' }}</td>
+                                        <td>{{ code.created_at.strftime('%Y-%m-%d %H:%M:%S') if code.created_at else '未知' }}</td>
+                                        <td>
+                                            {% if code.is_used %}
+                                            <span class="badge bg-secondary">已使用</span>
+                                            {% else %}
+                                            <span class="badge bg-success">可用</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ code.used_by_username or '-' }}</td>
+                                        <td>{{ code.used_at.strftime('%Y-%m-%d %H:%M:%S') if code.used_at else '-' }}</td>
+                                        <td>
+                                            {% if not code.is_used %}
+                                            <form method="POST" action="{{ url_for('delete_code', code=code.code) }}" style="display: inline;" 
+                                                  onsubmit="return confirm('确定要删除注册码 {{ code.code }} 吗？')">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="删除注册码">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                    <!-- 如果没有注册码，显示提示信息 -->
+                                    {% if not codes %}
+                                    <tr>
+                                        <td colspan="8" class="text-center">暂无注册码</td>
+                                    </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- 分页和统计信息 -->
+                        {% if total_count > 0 %}
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <div class="text-muted">
+                                显示第 {{ (page - 1) * 20 + 1 }} - {{ page * 20 if page * 20 < total_count else total_count }} 条，共 {{ total_count }} 条注册码
+                            </div>
+                            
+                            {% if total_pages > 1 %}
+                            <nav aria-label="注册码列表分页">
+                                <ul class="pagination mb-0">
+                                    <!-- 上一页 -->
+                                    <li class="page-item {{ 'disabled' if not has_prev }}">
+                                        {% if has_prev %}
+                                        <a class="page-link" href="{{ url_for('admin_codes', page=prev_page) }}">
+                                            <i class="fas fa-chevron-left"></i> 上一页
+                                        </a>
+                                        {% else %}
+                                        <span class="page-link"><i class="fas fa-chevron-left"></i> 上一页</span>
+                                        {% endif %}
+                                    </li>
+                                    
+                                    <!-- 页码 -->
+                                    {% set start_page = page - 2 if page > 2 else 1 %}
+                                    {% set end_page = start_page + 4 if start_page + 4 <= total_pages else total_pages %}
+                                    {% set start_page = end_page - 4 if end_page - 4 > 0 else 1 %}
+                                    
+                                    {% if start_page > 1 %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('admin_codes', page=1) }}">1</a>
+                                    </li>
+                                    {% if start_page > 2 %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link">...</span>
+                                    </li>
+                                    {% endif %}
+                                    {% endif %}
+                                    
+                                    {% for p in range(start_page, end_page + 1) %}
+                                    <li class="page-item {{ 'active' if p == page }}">
+                                        <a class="page-link" href="{{ url_for('admin_codes', page=p) }}">{{ p }}</a>
+                                    </li>
+                                    {% endfor %}
+                                    
+                                    {% if end_page < total_pages %}
+                                    {% if end_page < total_pages - 1 %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link">...</span>
+                                    </li>
+                                    {% endif %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('admin_codes', page=total_pages) }}">{{ total_pages }}</a>
+                                    </li>
+                                    {% endif %}
+                                    
+                                    <!-- 下一页 -->
+                                    <li class="page-item {{ 'disabled' if not has_next }}">
+                                        {% if has_next %}
+                                        <a class="page-link" href="{{ url_for('admin_codes', page=next_page) }}">
+                                            下一页 <i class="fas fa-chevron-right"></i>
+                                        </a>
+                                        {% else %}
+                                        <span class="page-link">下一页 <i class="fas fa-chevron-right"></i></span>
+                                        {% endif %}
+                                    </li>
+                                </ul>
+                            </nav>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- 充值码列表 -->
+                <div id="rechargeCodesPanel" class="card" style="display: none;">
+                    <div class="card-body">
+                        <!-- 面额过滤 -->
+                        <div class="mb-3">
+                            <label class="form-label">按面额过滤：</label>
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-outline-primary active" onclick="filterRechargeByAmount('all')">全部</button>
+                                <button type="button" class="btn btn-outline-primary" onclick="filterRechargeByAmount(1)">¥1</button>
+                                <button type="button" class="btn btn-outline-primary" onclick="filterRechargeByAmount(5)">¥5</button>
+                                <button type="button" class="btn btn-outline-primary" onclick="filterRechargeByAmount(10)">¥10</button>
+                                <button type="button" class="btn btn-outline-primary" onclick="filterRechargeByAmount(20)">¥20</button>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>充值码</th>
+                                        <th>面额</th>
+                                        <th>描述</th>
+                                        <th>创建者</th>
+                                        <th>创建时间</th>
+                                        <th>状态</th>
+                                        <th>使用者</th>
+                                        <th>使用时间</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rechargeCodesTableBody">
+                                    <!-- 充值码数据将通过AJAX加载 -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 充值码分页 -->
+                        <div id="rechargeCodesPagination"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 生成注册码模态框 -->
+    <div class="modal fade" id="generateModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-plus"></i> 生成注册码</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="{{ url_for('generate_code') }}">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="count" class="form-label">生成数量</label>
+                            <input type="number" class="form-control" id="count" name="count" value="1" min="1" max="500" required>
+                            <div class="form-text">一次最多生成500个注册码</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="description" class="form-label">描述/备注</label>
+                            <textarea class="form-control" id="description" name="description" rows="3" placeholder="可选，用于标记注册码用途"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> 生成
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 咸鱼链接配置模态框 -->
+    <div class="modal fade" id="xianyuLinksModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-link"></i> 配置咸鱼购买链接</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>说明：</strong>配置不同面额充值码的咸鱼购买链接，用户点击充值按钮时会跳转到对应链接
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">¥1 充值码链接</label>
+                            <input type="url" class="form-control" id="link1" placeholder="输入¥1充值码的咸鱼链接">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">¥5 充值码链接</label>
+                            <input type="url" class="form-control" id="link5" placeholder="输入¥5充值码的咸鱼链接">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">¥10 充值码链接</label>
+                            <input type="url" class="form-control" id="link10" placeholder="输入¥10充值码的咸鱼链接">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">¥20 充值码链接</label>
+                            <input type="url" class="form-control" id="link20" placeholder="输入¥20充值码的咸鱼链接">
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <i class="fas fa-lightbulb"></i>
+                            <strong>提示：</strong>
+                            <br>• 链接格式通常为：https://m.tb.cn/h.xxxxxx?tk=xxxxxx
+                            <br>• 建议在咸鱼创建对应面额的充值码商品，然后复制分享链接
+                            <br>• 配置后用户点击充值按钮会跳转到对应的咸鱼商品页面
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="saveXianyuLinks()">
+                        <i class="fas fa-save"></i> 保存配置
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="bg-dark text-white text-center py-3 mt-5">
+        <div class="container">
+            <p>&copy; 2025 邮箱服务平台. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- 自定义JS -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    
+    <script>
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(function() {
+            // 显示复制成功提示
+            const toast = document.createElement('div');
+            toast.className = 'toast align-items-center text-white bg-success border-0';
+            toast.setAttribute('role', 'alert');
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="fas fa-check"></i> 注册码已复制到剪贴板
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            
+            // 添加到页面并显示
+            document.body.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+            
+            // 3秒后自动移除
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 3000);
+        }).catch(function(err) {
+            alert('复制失败：' + err);
+        });
+    }
+
+    // 确认批量删除已使用的注册码
+    function confirmDeleteUsedCodes() {
+        if (confirm('确定要删除所有已使用的注册码吗？\n\n此操作不可恢复，建议在删除前确认不再需要这些记录。')) {
+            // 创建表单并提交
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/admin/codes/delete_used';
+
+            // 添加CSRF令牌（如果需要）
+            const csrfToken = document.querySelector('meta[name="csrf-token"]');
+            if (csrfToken) {
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrf_token';
+                csrfInput.value = csrfToken.getAttribute('content');
+                form.appendChild(csrfInput);
+            }
+
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+
+    // 面板切换功能
+    function switchTab(tabType) {
+        if (tabType === 'registration') {
+            // 显示注册码面板
+            document.getElementById('regCodesPanel').style.display = 'block';
+            document.getElementById('rechargeCodesPanel').style.display = 'none';
+            document.getElementById('regCodeActions').style.display = 'block';
+            document.getElementById('rechargeCodeActions').style.display = 'none';
+
+            // 更新按钮状态
+            document.getElementById('regCodesTab').className = 'btn btn-primary';
+            document.getElementById('rechargeCodesTab').className = 'btn btn-outline-primary';
+        } else if (tabType === 'recharge') {
+            // 显示充值码面板
+            document.getElementById('regCodesPanel').style.display = 'none';
+            document.getElementById('rechargeCodesPanel').style.display = 'block';
+            document.getElementById('regCodeActions').style.display = 'none';
+            document.getElementById('rechargeCodeActions').style.display = 'block';
+
+            // 更新按钮状态
+            document.getElementById('regCodesTab').className = 'btn btn-outline-primary';
+            document.getElementById('rechargeCodesTab').className = 'btn btn-primary';
+
+            // 加载充值码数据
+            loadRechargeCodes();
+        }
+    }
+
+    // 复制所有未使用的注册码
+    function copyAllUnusedRegCodes() {
+        fetch('/api/admin/unused_registration_codes')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.codes.length > 0) {
+                    const codesText = data.codes.join('\n');
+                    navigator.clipboard.writeText(codesText).then(() => {
+                        showToast(`已复制 ${data.codes.length} 个未使用的注册码`, 'success');
+                    });
+                } else {
+                    showToast('没有未使用的注册码', 'warning');
+                }
+            })
+            .catch(error => {
+                showToast('获取注册码失败：' + error.message, 'error');
+            });
+    }
+
+    // 复制指定面额的未使用充值码
+    function copyUnusedRechargeCodes(amount) {
+        fetch(`/api/admin/unused_recharge_codes/${amount}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.codes.length > 0) {
+                    const codesText = data.codes.join('\n');
+                    navigator.clipboard.writeText(codesText).then(() => {
+                        showToast(`已复制 ${data.codes.length} 个未使用的 ¥${amount} 充值码`, 'success');
+                    });
+                } else {
+                    showToast(`没有未使用的 ¥${amount} 充值码`, 'warning');
+                }
+            })
+            .catch(error => {
+                showToast('获取充值码失败：' + error.message, 'error');
+            });
+    }
+
+    // 生成充值码
+    function generateRechargeCodes(amount) {
+        const count = prompt(`请输入要生成的 ¥${amount} 充值码数量（最多500个）：`, '10');
+        if (count && parseInt(count) > 0) {
+            if (parseInt(count) > 500) {
+                showToast('一次最多只能生成500个充值码', 'warning');
+                return;
+            }
+            const description = prompt('请输入充值码描述（可选）：', `¥${amount}充值码`);
+
+            fetch('/api/admin/generate_recharge_codes', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    amount: amount,
+                    count: parseInt(count),
+                    description: description || `¥${amount}充值码`
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(`成功生成 ${count} 个 ¥${amount} 充值码`, 'success');
+                    loadRechargeCodes(); // 重新加载数据
+                } else {
+                    showToast('生成失败：' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showToast('生成失败：' + error.message, 'error');
+            });
+        }
+    }
+
+    // 加载充值码数据
+    function loadRechargeCodes(amount = null, page = 1) {
+        let url = `/api/admin/recharge_codes?page=${page}`;
+        if (amount) {
+            url += `&amount=${amount}`;
+        }
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateRechargeCodesTable(data.codes);
+                    // 暂时注释分页功能，简化实现
+                    // updateRechargeCodesPagination(data.pagination);
+                } else {
+                    showToast('加载充值码失败：' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showToast('加载充值码失败：' + error.message, 'error');
+            });
+    }
+
+    // 更新充值码表格
+    function updateRechargeCodesTable(codes) {
+        const tbody = document.getElementById('rechargeCodesTableBody');
+        tbody.innerHTML = '';
+
+        codes.forEach(code => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>
+                    <code class="text-primary">${code.code}</code>
+                    <button class="btn btn-sm btn-outline-secondary ms-2" onclick="copyToClipboard('${code.code}')" title="复制充值码">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </td>
+                <td><span class="badge bg-info">¥${code.amount}</span></td>
+                <td>${code.description || '无描述'}</td>
+                <td>${code.created_by_username || '系统'}</td>
+                <td>${new Date(code.created_at).toLocaleString()}</td>
+                <td>
+                    ${code.is_used ?
+                        '<span class="badge bg-secondary">已使用</span>' :
+                        '<span class="badge bg-success">可用</span>'
+                    }
+                </td>
+                <td>${code.used_by_username || '-'}</td>
+                <td>${code.used_at ? new Date(code.used_at).toLocaleString() : '-'}</td>
+                <td>
+                    <button class="btn btn-sm btn-danger" onclick="deleteRechargeCode('${code.code}')" title="删除充值码">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    // 按面额过滤充值码
+    function filterRechargeByAmount(amount) {
+        // 更新按钮状态
+        document.querySelectorAll('#rechargeCodesPanel .btn-group .btn').forEach(btn => {
+            btn.className = 'btn btn-outline-primary';
+        });
+        event.target.className = 'btn btn-outline-primary active';
+
+        // 加载数据
+        loadRechargeCodes(amount === 'all' ? null : amount);
+    }
+
+    // 删除充值码
+    function deleteRechargeCode(code) {
+        if (confirm('确定要删除这个充值码吗？')) {
+            fetch(`/api/admin/recharge_codes/${code}/delete`, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('充值码删除成功', 'success');
+                    loadRechargeCodes();
+                } else {
+                    showToast('删除失败：' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showToast('删除失败：' + error.message, 'error');
+            });
+        }
+    }
+
+    // 确认删除已使用的充值码
+    function confirmDeleteUsedRechargeCodes() {
+        if (confirm('确定要删除所有已使用的充值码吗？\n\n此操作不可恢复！')) {
+            fetch('/api/admin/recharge_codes/delete_used', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(`成功删除 ${data.deleted_count} 个已使用的充值码`, 'success');
+                    loadRechargeCodes();
+                } else {
+                    showToast('删除失败：' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showToast('删除失败：' + error.message, 'error');
+            });
+        }
+    }
+
+    // 显示Toast消息
+    function showToast(message, type = 'info') {
+        const bgClass = type === 'success' ? 'bg-success' :
+                       type === 'error' ? 'bg-danger' :
+                       type === 'warning' ? 'bg-warning' : 'bg-info';
+
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white ${bgClass} border-0 position-fixed`;
+        toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999;';
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+
+        document.body.appendChild(toast);
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 3000);
+    }
+
+    // 加载咸鱼链接配置
+    function loadXianyuLinks() {
+        fetch('/api/admin/xianyu_links')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('link1').value = data.links[1] || '';
+                    document.getElementById('link5').value = data.links[5] || '';
+                    document.getElementById('link10').value = data.links[10] || '';
+                    document.getElementById('link20').value = data.links[20] || '';
+                }
+            })
+            .catch(error => {
+                console.error('加载咸鱼链接失败:', error);
+            });
+    }
+
+    // 保存咸鱼链接配置
+    function saveXianyuLinks() {
+        const links = {
+            1: document.getElementById('link1').value.trim(),
+            5: document.getElementById('link5').value.trim(),
+            10: document.getElementById('link10').value.trim(),
+            20: document.getElementById('link20').value.trim()
+        };
+
+        // 保存每个链接
+        let savedCount = 0;
+        let totalCount = 0;
+
+        for (const [amount, link] of Object.entries(links)) {
+            if (link) {
+                totalCount++;
+                fetch('/api/admin/xianyu_links', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        amount: parseInt(amount),
+                        link: link
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        savedCount++;
+                        if (savedCount === totalCount) {
+                            showToast('咸鱼链接配置保存成功', 'success');
+                            // 关闭模态框
+                            const modal = bootstrap.Modal.getInstance(document.getElementById('xianyuLinksModal'));
+                            modal.hide();
+                        }
+                    } else {
+                        showToast(`¥${amount} 链接保存失败: ${data.message}`, 'error');
+                    }
+                })
+                .catch(error => {
+                    showToast(`¥${amount} 链接保存失败`, 'error');
+                });
+            }
+        }
+
+        if (totalCount === 0) {
+            showToast('请至少配置一个链接', 'warning');
+        }
+    }
+
+    // 模态框显示时加载当前配置
+    document.getElementById('xianyuLinksModal').addEventListener('show.bs.modal', function () {
+        loadXianyuLinks();
+    });
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+

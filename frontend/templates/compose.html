@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>写邮件 - 邮箱服务</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 自定义CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fas fa-envelope"></i> 邮箱服务
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('index') }}"><i class="fas fa-home"></i> 首页</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('mails') }}"><i class="fas fa-envelope-open-text"></i> 邮件列表</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user"></i> {{ user.username }}
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('profile') }}"><i class="fas fa-user-cog"></i> 个人资料</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('register_email') }}"><i class="fas fa-at"></i> 邮箱管理</a></li>
+                            {% if user.is_vip %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin_users') }}"><i class="fas fa-users-cog"></i> 用户管理</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin_domains') }}"><i class="fas fa-network-wired"></i> 域名管理</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin_codes') }}"><i class="fas fa-key"></i> 注册码管理</a></li>
+                            {% endif %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> 退出登录</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容 -->
+    <main class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <h1><i class="fas fa-edit"></i> 写邮件</h1>
+                <p>撰写并发送新邮件</p>
+                
+                <!-- 写邮件表单 -->
+                <div class="card">
+                    <div class="card-body">
+                        {% if error %}
+                        <div class="alert alert-danger" role="alert">
+                            <i class="fas fa-exclamation-triangle"></i> {{ error }}
+                        </div>
+                        {% endif %}
+                        
+                        <form method="POST" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <label for="from_email_id" class="form-label">发件人邮箱</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                    <select class="form-select" id="from_email_id" name="from_email_id" required>
+                                        <option value="">请选择发件人邮箱</option>
+                                        {% for email in user_emails %}
+                                        <option value="{{ email.id }}">{{ email.email_address }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                {% if not user_emails %}
+                                <small class="form-text text-muted">
+                                    您还没有注册邮箱，<a href="{{ url_for('register_email') }}">点击注册</a>
+                                </small>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="to_email" class="form-label">收件人邮箱</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-user-plus"></i></span>
+                                    <input type="email" class="form-control" id="to_email" name="to_email" 
+                                           placeholder="收件人邮箱地址" 
+                                           value="{{ reply_data.to_email if reply_data else '' }}" required>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="subject" class="form-label">主题</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-font"></i></span>
+                                    <input type="text" class="form-control" id="subject" name="subject" 
+                                           placeholder="邮件主题" 
+                                           value="{{ reply_data.subject if reply_data else '' }}" required>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="content" class="form-label">内容</label>
+                                <textarea class="form-control" id="content" name="content" rows="10" placeholder="邮件内容">{{ reply_data.content if reply_data else '' }}</textarea>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="attachments" class="form-label">附件</label>
+                                <input class="form-control" type="file" id="attachments" name="attachments" multiple>
+                                <div id="attachmentPreview" class="mt-2"></div>
+                            </div>
+                            
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> 发送</button>
+                                <button type="reset" class="btn btn-secondary"><i class="fas fa-undo"></i> 重置</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-dark text-white text-center py-3 mt-5">
+        <div class="container">
+            <p>&copy; 2025 邮箱服务. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- 附件预览脚本 -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const attachmentInput = document.getElementById('attachments');
+            const attachmentPreview = document.getElementById('attachmentPreview');
+            
+            attachmentInput.addEventListener('change', function() {
+                const files = Array.from(this.files);
+                attachmentPreview.innerHTML = '';
+                
+                if (files.length > 0) {
+                    console.log('已选择附件:', files.map(f => f.name));
+                    
+                    const previewContainer = document.createElement('div');
+                    previewContainer.className = 'alert alert-info';
+                    previewContainer.innerHTML = `
+                        <h6><i class="fas fa-paperclip"></i> 已选择 ${files.length} 个附件:</h6>
+                        <ul class="mb-0">
+                            ${files.map(file => `
+                                <li>
+                                    <strong>${file.name}</strong> 
+                                    <small class="text-muted">(${formatFileSize(file.size)})</small>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    `;
+                    attachmentPreview.appendChild(previewContainer);
+                }
+            });
+            
+            // 格式化文件大小
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+            
+            // 重置表单时也清空附件预览
+            document.querySelector('button[type="reset"]').addEventListener('click', function() {
+                setTimeout(() => {
+                    attachmentPreview.innerHTML = '';
+                }, 100);
+            });
+
+            // 防止重复提交
+            const form = document.querySelector('form');
+            const submitButton = document.querySelector('button[type="submit"]');
+            let isSubmitting = false;
+
+            form.addEventListener('submit', function(e) {
+                if (isSubmitting) {
+                    e.preventDefault();
+                    return false;
+                }
+
+                isSubmitting = true;
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 发送中...';
+
+                // 5秒后重新启用按钮（防止网络问题导致永久禁用）
+                setTimeout(() => {
+                    isSubmitting = false;
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = '<i class="fas fa-paper-plane"></i> 发送';
+                }, 5000);
+            });
+        });
+    </script>
+    
+    <!-- 自定义JS -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
