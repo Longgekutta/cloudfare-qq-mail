@@ -12,8 +12,10 @@ from typing import List, Dict, Optional
 class EmailSender:
     """邮件发送类，封装Resend API"""
     
-    def __init__(self, api_key: str = "re_6giBFioy_HW9cYt9xfR473x39HkuKtXT5"):
+    def __init__(self, api_key: str = None):
         """初始化邮件发送器"""
+        if api_key is None:
+            api_key = os.getenv('RESEND_API_KEY', "re_6giBFioy_HW9cYt9xfR473x39HkuKtXT5")  # 生产环境请使用环境变量
         resend.api_key = api_key
         self.api_key = api_key
         print(f"📧 邮件发送器已初始化")

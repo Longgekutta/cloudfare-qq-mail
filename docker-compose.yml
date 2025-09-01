@@ -4,15 +4,26 @@ services:
     build: .
     container_name: cloudfare-qq-mail-web
     ports:
-      - "5000:5000"
+      - "${WEB_PORT:-5000}:5000"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
       - DB_HOST=db
       - DB_USER=root
-      - DB_PASSWORD=518107qW
-      - DB_NAME=cloudfare_qq_mail
-      - FLASK_ENV=production
+      - DB_PASSWORD=${DB_PASSWORD:-518107qW}
+      - DB_NAME=${DB_NAME:-cloudfare_qq_mail}
+      - FLASK_ENV=${FLASK_ENV:-production}
+      - SECRET_KEY=${SECRET_KEY:-cloudfare_qq_mail_secret_key_2025}
+      - QQ_EMAIL=${QQ_EMAIL:-2846117874@qq.com}
+      - QQ_AUTH_CODE=${QQ_AUTH_CODE:-ajqnryrvvjmsdcgi}
+      - TARGET_DOMAIN=${TARGET_DOMAIN:-shiep.edu.kg}
+      - DEBUG_MODE=${DEBUG_MODE:-False}
+      - RESEND_API_KEY=${RESEND_API_KEY:-re_6giBFioy_HW9cYt9xfR473x39HkuKtXT5}
+      - YIPAY_PID=${YIPAY_PID:-6166}
+      - YIPAY_KEY=${YIPAY_KEY:-deefc7cc0449be9cb621b7800f5e7f1c}
+      - YIPAY_GATEWAY=${YIPAY_GATEWAY:-https://pay.yzhifupay.com/}
+      - DOMAIN=${DOMAIN:-http://localhost:${WEB_PORT:-5000}}
     volumes:
       - ./uploads:/app/uploads
       - ./temp_attachments:/app/temp_attachments
@@ -20,18 +31,24 @@ services:
     restart: unless-stopped
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # MySQL数据库服务
   db:
     image: mysql:8.0
     container_name: cloudfare-qq-mail-db
     environment:
-      MYSQL_ROOT_PASSWORD: 518107qW
-      MYSQL_DATABASE: cloudfare_qq_mail
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-518107qW}
+      MYSQL_DATABASE: ${DB_NAME:-cloudfare_qq_mail}
       MYSQL_CHARACTER_SET_SERVER: utf8mb4
       MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
     ports:
-      - "3306:3306"
+      - "${DB_PORT:-3306}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -39,6 +56,12 @@ services:
     networks:
       - app-network
     command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD:-518107qW}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   # phpMyAdmin (可选，用于数据库管理)
   phpmyadmin:
@@ -48,14 +71,17 @@ services:
       PMA_HOST: db
       PMA_PORT: 3306
       PMA_USER: root
-      PMA_PASSWORD: 518107qW
+      PMA_PASSWORD: ${DB_PASSWORD:-518107qW}
     ports:
-      - "8080:80"
+      - "${PHPMYADMIN_PORT:-8080}:80"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - app-network
+    profiles:
+      - admin  # 使用 profile 使其可选
 
 # 数据卷
 volumes:
