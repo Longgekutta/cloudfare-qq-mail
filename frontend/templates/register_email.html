@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注册邮箱 - 邮箱服务</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 自定义CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fas fa-envelope"></i> 邮箱服务
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('index') }}"><i class="fas fa-home"></i> 首页</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('mails') }}"><i class="fas fa-envelope-open-text"></i> 邮件列表</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user"></i> {{ user.username }}
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('profile') }}"><i class="fas fa-user-cog"></i> 个人资料</a></li>
+                            {% if user.is_vip %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin_users') }}"><i class="fas fa-users-cog"></i> 用户管理</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin_domains') }}"><i class="fas fa-network-wired"></i> 域名管理</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin_codes') }}"><i class="fas fa-key"></i> 注册码管理</a></li>
+                            {% endif %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> 退出登录</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容 -->
+    <main class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <h1><i class="fas fa-at"></i> 注册邮箱</h1>
+                <p>为您的账户添加新的邮箱地址</p>
+                
+                <!-- 注册邮箱表单 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-plus-circle"></i> 添加邮箱</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if error %}
+                        <div class="alert alert-danger" role="alert">
+                            <i class="fas fa-exclamation-triangle"></i> {{ error }}
+                        </div>
+                        {% endif %}
+                        
+                        <form method="POST">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="email_prefix" class="form-label">邮箱前缀</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="fas fa-at"></i></span>
+                                            <input type="text" class="form-control" id="email_prefix" name="email_prefix" placeholder="请输入邮箱前缀" required>
+                                        </div>
+                                        <small class="form-text text-muted">只能包含字母、数字、点号和下划线</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="domain_id" class="form-label">选择域名</label>
+                                        <select class="form-select" id="domain_id" name="domain_id" required>
+                                            <option value="">请选择域名</option>
+                                            {% for domain in domains %}
+                                            <option value="{{ domain.id }}">{{ domain.domain_name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+
+                            
+                            <div class="mb-3">
+                                <label class="form-label">预览邮箱地址</label>
+                                <div class="alert alert-info" id="email-preview">
+                                    <i class="fas fa-envelope"></i> 请先输入邮箱前缀并选择域名
+                                </div>
+                            </div>
+
+                            <!-- 费用提示 -->
+                            <div class="mb-3">
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-info-circle"></i> <strong>注册费用说明：</strong>
+                                    <ul class="mb-0 mt-2">
+                                        <li>前5个邮箱：<span class="text-success fw-bold">免费</span></li>
+                                        <li>第6个及以后：<span class="text-danger fw-bold">¥1.00/个</span></li>
+                                        <li>当前已注册：<span class="fw-bold">{{ user_emails|length }}</span> 个邮箱</li>
+                                        {% if user_emails|length >= 5 %}
+                                        <li class="text-danger">下一个邮箱需要：<span class="fw-bold">¥1.00</span></li>
+                                        {% else %}
+                                        <li class="text-success">下一个邮箱：<span class="fw-bold">免费</span></li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="d-grid">
+                                {% if user_emails|length >= 5 %}
+                                <button type="submit" class="btn btn-warning">
+                                    <i class="fas fa-plus"></i> 注册邮箱（¥1.00）
+                                </button>
+                                {% else %}
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-plus"></i> 免费注册邮箱
+                                </button>
+                                {% endif %}
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- 已注册邮箱列表 -->
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5><i class="fas fa-list"></i> 已注册邮箱</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if user_emails %}
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>邮箱地址</th>
+                                        <th>域名</th>
+                                        <th>创建时间</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for email in user_emails %}
+                                    <tr>
+                                        <td>{{ email.email_address }}</td>
+                                        <td>{{ email.domain_name }}</td>
+                                        <td>{{ email.created_at }}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-danger" onclick="deleteEmail({{ email.id }})"><i class="fas fa-trash"></i> 删除</button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <p class="text-center">暂无已注册邮箱</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-dark text-white text-center py-3 mt-5">
+        <div class="container">
+            <p>&copy; 2025 邮箱服务. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- 自定义JS -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const emailPrefixInput = document.getElementById('email_prefix');
+            const domainSelect = document.getElementById('domain_id');
+            const emailPreview = document.getElementById('email-preview');
+            
+            function updatePreview() {
+                const prefix = emailPrefixInput.value.trim();
+                const domainOption = domainSelect.options[domainSelect.selectedIndex];
+                
+                if (prefix && domainOption.value) {
+                    const domainName = domainOption.text;
+                    emailPreview.innerHTML = `<i class="fas fa-envelope"></i> ${prefix}@${domainName}`;
+                } else {
+                    emailPreview.innerHTML = '<i class="fas fa-envelope"></i> 请先输入邮箱前缀并选择域名';
+                }
+            }
+            
+            // 邮箱前缀验证
+            emailPrefixInput.addEventListener('input', function() {
+                const value = this.value;
+                const regex = /^[a-zA-Z0-9._-]*$/;
+                
+                if (!regex.test(value)) {
+                    this.setCustomValidity('只能包含字母、数字、点号、下划线和连字符');
+                } else {
+                    this.setCustomValidity('');
+                }
+                
+                updatePreview();
+            });
+            
+            domainSelect.addEventListener('change', updatePreview);
+        });
+        
+        function deleteEmail(emailId) {
+            const warningMessage = '该邮箱将与您的账户进行解绑，并且立即删除该邮箱所有邮件，以保护您的隐私。删除邮箱后，您消耗的邮箱注册数不会返还。\n\n确定要删除这个邮箱吗？';
+
+            if (confirm(warningMessage)) {
+                // 调用API删除邮箱
+                fetch(`/delete_email/${emailId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('邮箱删除成功');
+                        location.reload(); // 刷新页面
+                    } else {
+                        alert('删除失败：' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('删除失败：' + error.message);
+                });
+            }
+        }
+    </script>
+</body>
+</html>

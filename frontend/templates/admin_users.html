@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户管理 - 邮箱服务</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 自定义CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fas fa-envelope"></i> 邮箱服务
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('index') }}"><i class="fas fa-home"></i> 首页</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('mails') }}"><i class="fas fa-envelope-open-text"></i> 邮件列表</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user"></i> {{ user.username }}
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('profile') }}"><i class="fas fa-user-cog"></i> 个人资料</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item active" href="{{ url_for('admin_users') }}"><i class="fas fa-users-cog"></i> 用户管理</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin_domains') }}"><i class="fas fa-network-wired"></i> 域名管理</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin_codes') }}"><i class="fas fa-key"></i> 码管理</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> 退出登录</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容 -->
+    <main class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <h1><i class="fas fa-users-cog"></i> 用户管理</h1>
+                <p>管理系统的用户。</p>
+                
+                <!-- 添加用户按钮 -->
+                <div class="mb-3">
+                    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                        <i class="fas fa-user-plus"></i> 添加用户
+                    </button>
+                </div>
+                
+                <!-- 用户列表 -->
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>用户名</th>
+                                        <th>邮箱</th>
+                                        <th>最新密码</th>
+                                        <th>会员状态</th>
+                                        <th>管理员</th>
+                                        <th>余额</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for user in users %}
+                                    <tr>
+                                        <td>{{ user.username }}</td>
+                                        <td>{{ user.email }}</td>
+                                        <td>
+                                            <span class="text-monospace small" style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">
+                                                {{ user.latest_password or '未设置' }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if user.is_vip %}
+                                            <span class="badge bg-success">会员</span>
+                                            {% else %}
+                                            <span class="badge bg-secondary">普通</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if user.is_admin %}
+                                            <span class="badge bg-danger">管理员</span>
+                                            {% else %}
+                                            <span class="badge bg-light text-dark">普通用户</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>¥{{ user.balance }}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-primary edit-user" data-user-id="{{ user.id }}">
+                                                <i class="fas fa-edit"></i> 编辑
+                                            </button>
+                                            <button class="btn btn-sm btn-danger delete-user" data-user-id="{{ user.id }}" data-username="{{ user.username }}">
+                                                <i class="fas fa-trash"></i> 删除
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                    <!-- 如果没有用户，显示提示信息 -->
+                                    {% if not users %}
+                                    <tr>
+                                        <td colspan="5" class="text-center">暂无用户</td>
+                                    </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 添加用户模态框 -->
+    <div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addUserModalLabel">添加用户</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addUserForm">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">用户名</label>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">邮箱 <small class="text-muted">(可选)</small></label>
+                            <input type="email" class="form-control" id="email" name="email" placeholder="可选填写联系邮箱">
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">密码</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="is_vip" name="is_vip">
+                            <label class="form-check-label" for="is_vip">会员用户</label>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="is_admin" name="is_admin">
+                            <label class="form-check-label" for="is_admin">管理员权限</label>
+                        </div>
+                        <div class="mb-3">
+                            <label for="balance" class="form-label">余额</label>
+                            <input type="number" class="form-control" id="balance" name="balance" step="0.01" value="0.00">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="saveUserBtn">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑用户模态框 -->
+    <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editUserModalLabel">编辑用户</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editUserForm">
+                        <input type="hidden" id="edit_user_id" name="user_id">
+                        <div class="mb-3">
+                            <label for="edit_username" class="form-label">用户名</label>
+                            <input type="text" class="form-control" id="edit_username" name="username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_email" class="form-label">邮箱 <small class="text-muted">(可选)</small></label>
+                            <input type="email" class="form-control" id="edit_email" name="email" placeholder="可选填写联系邮箱">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_new_password" class="form-label">新密码 <small class="text-muted">(可选，留空则不修改)</small></label>
+                            <input type="password" class="form-control" id="edit_new_password" name="new_password" placeholder="输入新密码以重置用户密码">
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="edit_is_vip" name="is_vip">
+                            <label class="form-check-label" for="edit_is_vip">会员用户</label>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="edit_is_admin" name="is_admin">
+                            <label class="form-check-label" for="edit_is_admin">管理员权限</label>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_balance" class="form-label">余额</label>
+                            <input type="number" class="form-control" id="edit_balance" name="balance" step="0.01">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="updateUserBtn">更新</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="bg-dark text-white text-center py-3 mt-5">
+        <div class="container">
+            <p>&copy; 2025 邮箱服务. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- 自定义JS -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script>
+        // 添加用户
+        document.getElementById('saveUserBtn').addEventListener('click', function() {
+            const username = document.getElementById('username').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const isVip = document.getElementById('is_vip').checked;
+            const isAdmin = document.getElementById('is_admin').checked;
+            const balance = parseFloat(document.getElementById('balance').value) || 0;
+
+            if (!username || !password) {
+                alert('用户名和密码不能为空');
+                return;
+            }
+
+            fetch('/api/admin/users', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: username,
+                    email: email,
+                    password: password,
+                    is_vip: isVip,
+                    is_admin: isAdmin,
+                    balance: balance
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('用户添加成功！');
+                    location.reload(); // 刷新页面
+                } else {
+                    alert('添加失败：' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('添加失败：' + error.message);
+            });
+
+            // 关闭模态框
+            var addUserModal = bootstrap.Modal.getInstance(document.getElementById('addUserModal'));
+            addUserModal.hide();
+        });
+
+        // 编辑用户
+        document.querySelectorAll('.edit-user').forEach(function(button) {
+            button.addEventListener('click', function() {
+                var userId = this.getAttribute('data-user-id');
+
+                // 获取用户详情
+                fetch('/api/admin/users/' + userId)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            var user = data.user;
+                            // 填充编辑表单
+                            document.getElementById('edit_user_id').value = user.id;
+                            document.getElementById('edit_username').value = user.username;
+                            document.getElementById('edit_email').value = user.email || '';
+                            document.getElementById('edit_is_vip').checked = user.is_vip || false;
+                            document.getElementById('edit_is_admin').checked = user.is_admin || false;
+                            document.getElementById('edit_balance').value = user.balance || 0;
+
+                            // 显示编辑模态框
+                            var editUserModal = new bootstrap.Modal(document.getElementById('editUserModal'));
+                            editUserModal.show();
+                        } else {
+                            alert('获取用户信息失败：' + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        alert('获取用户信息失败：' + error.message);
+                    });
+            });
+        });
+
+        // 更新用户
+        document.getElementById('updateUserBtn').addEventListener('click', function() {
+            var userId = document.getElementById('edit_user_id').value;
+            var username = document.getElementById('edit_username').value.trim();
+            var email = document.getElementById('edit_email').value.trim();
+            var newPassword = document.getElementById('edit_new_password').value.trim();
+            var isVip = document.getElementById('edit_is_vip').checked;
+            var isAdmin = document.getElementById('edit_is_admin').checked;
+            var balance = parseFloat(document.getElementById('edit_balance').value) || 0;
+
+            if (!username) {
+                alert('用户名不能为空');
+                return;
+            }
+
+            var requestData = {
+                username: username,
+                email: email,
+                is_vip: isVip,
+                is_admin: isAdmin,
+                balance: balance
+            };
+
+            // 如果提供了新密码，添加到请求中
+            if (newPassword) {
+                requestData.new_password = newPassword;
+            }
+
+            fetch('/api/admin/users/' + userId, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('用户更新成功！');
+                    location.reload();
+                } else {
+                    alert('更新失败：' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('更新失败：' + error.message);
+            });
+
+            // 关闭模态框
+            var editUserModal = bootstrap.Modal.getInstance(document.getElementById('editUserModal'));
+            editUserModal.hide();
+        });
+
+        // 删除用户
+        document.querySelectorAll('.delete-user').forEach(function(button) {
+            button.addEventListener('click', function() {
+                // 获取用户ID
+                var userId = this.getAttribute('data-user-id');
+                var username = this.getAttribute('data-username');
+
+                // 确认删除
+                if (confirm('确定要删除用户 "' + username + '" 吗？此操作不可恢复！')) {
+                    fetch('/api/admin/users/' + userId, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('用户删除成功！');
+                            location.reload(); // 刷新页面
+                        } else {
+                            alert('删除失败：' + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        alert('删除失败：' + error.message);
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

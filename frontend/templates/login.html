@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 - 邮箱监控系统</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 自定义CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="d-flex flex-column min-vh-100">
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fas fa-envelope"></i> 邮箱服务
+            </a>
+        </div>
+    </nav>
+
+    <!-- 主要内容 -->
+    <main class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header text-center">
+                        <h3><i class="fas fa-sign-in-alt"></i> 用户登录</h3>
+                    </div>
+                    <div class="card-body">
+                        {% if error %}
+                        <div class="alert alert-danger" role="alert">
+                            <i class="fas fa-exclamation-triangle"></i> {{ error }}
+                        </div>
+                        {% endif %}
+                        
+                        <form method="POST">
+                            <div class="mb-3">
+                                <label for="username" class="form-label">用户名</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                    <input type="text" class="form-control" id="username" name="username" required>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="password" class="form-label">密码</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                    <input type="password" class="form-control" id="password" name="password" required>
+                                    <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                        <i class="fas fa-eye" id="togglePasswordIcon"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="remember" name="remember">
+                                <label class="form-check-label" for="remember">记住我</label>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary"><i class="fas fa-sign-in-alt"></i> 登录</button>
+                            </div>
+                        </form>
+                        
+                        <div class="text-center mt-3">
+                            <a href="javascript:void(0)" onclick="toggleLoginMethod()" class="text-decoration-none">
+                                <i class="fas fa-envelope"></i> <span id="toggleText">使用邮箱验证码登录</span>
+                            </a>
+                        </div>
+
+                        <div class="text-center mt-2">
+                            <a href="{{ url_for('register') }}">还没有账号？立即注册</a>
+                        </div>
+
+                        <!-- 邮箱验证码登录表单 -->
+                        <div id="emailLoginForm" style="display: none;" class="mt-4">
+                            <hr>
+                            <h5 class="text-center mb-3">邮箱验证码登录</h5>
+                            <form id="emailLoginFormElement">
+                                <div class="mb-3">
+                                    <label for="loginEmail" class="form-label">绑定邮箱</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                        <input type="email" class="form-control" id="loginEmail" placeholder="输入已绑定的邮箱" required>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <div class="row">
+                                        <div class="col-8">
+                                            <label for="loginCode" class="form-label">验证码</label>
+                                            <input type="text" class="form-control" id="loginCode" placeholder="输入6位验证码" maxlength="6" required>
+                                        </div>
+                                        <div class="col-4">
+                                            <label class="form-label">&nbsp;</label>
+                                            <button type="button" class="btn btn-outline-primary w-100" onclick="sendLoginCode()" id="sendLoginCodeBtn">
+                                                <span id="sendLoginCodeText">发送验证码</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="fas fa-sign-in-alt"></i> 邮箱登录
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-dark text-white text-center py-3 mt-auto">
+        <div class="container">
+            <p class="mb-0">&copy; 2025 邮箱监控系统. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- 自定义JS -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+
+    <script>
+        let loginCountdown = 0;
+        let loginCountdownTimer = null;
+
+        // 切换登录方式
+        function toggleLoginMethod() {
+            const emailForm = document.getElementById('emailLoginForm');
+            const toggleText = document.getElementById('toggleText');
+
+            if (emailForm.style.display === 'none') {
+                emailForm.style.display = 'block';
+                toggleText.textContent = '使用用户名密码登录';
+            } else {
+                emailForm.style.display = 'none';
+                toggleText.textContent = '使用邮箱验证码登录';
+            }
+        }
+
+        // 发送登录验证码
+        function sendLoginCode() {
+            const email = document.getElementById('loginEmail').value.trim();
+            if (!email) {
+                alert('请输入邮箱地址');
+                return;
+            }
+
+            if (!isValidEmail(email)) {
+                alert('请输入有效的邮箱地址');
+                return;
+            }
+
+            // 发送验证码请求
+            fetch('/send_login_verification_code', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: email
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('验证码已发送到您的邮箱');
+                    startLoginCountdown();
+                } else {
+                    alert('发送失败：' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('发送失败：' + error.message);
+            });
+        }
+
+        // 邮箱验证码登录
+        document.getElementById('emailLoginFormElement').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const email = document.getElementById('loginEmail').value.trim();
+            const code = document.getElementById('loginCode').value.trim();
+
+            if (!email || !code) {
+                alert('请输入邮箱地址和验证码');
+                return;
+            }
+
+            fetch('/email_login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: email,
+                    code: code
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (data.need_password_reset) {
+                        alert('登录成功！为了账户安全，请设置新密码。');
+                        window.location.href = '/reset_password_after_email_login';
+                    } else {
+                        window.location.href = '/';
+                    }
+                } else {
+                    alert('登录失败：' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('登录失败：' + error.message);
+            });
+        });
+
+        // 开始倒计时
+        function startLoginCountdown() {
+            loginCountdown = 60;
+            const btn = document.getElementById('sendLoginCodeBtn');
+            const text = document.getElementById('sendLoginCodeText');
+
+            btn.disabled = true;
+
+            loginCountdownTimer = setInterval(() => {
+                text.textContent = `${loginCountdown}秒后重发`;
+                loginCountdown--;
+
+                if (loginCountdown < 0) {
+                    clearInterval(loginCountdownTimer);
+                    btn.disabled = false;
+                    text.textContent = '发送验证码';
+                }
+            }, 1000);
+        }
+
+        // 验证邮箱格式
+        function isValidEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+
+        // 密码显示/隐藏切换
+        document.getElementById('togglePassword').addEventListener('click', function() {
+            const passwordInput = document.getElementById('password');
+            const toggleIcon = document.getElementById('togglePasswordIcon');
+
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.classList.remove('fa-eye');
+                toggleIcon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.classList.remove('fa-eye-slash');
+                toggleIcon.classList.add('fa-eye');
+            }
+        });
+    </script>
+</body>
+</html>

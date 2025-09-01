@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能支付 - {{ user.username }}</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- 自定义样式 -->
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    
+    <style>
+        /* 现代化渐变背景 */
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* 背景装饰元素 */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: backgroundMove 20s linear infinite;
+            z-index: -1;
+        }
+
+        @keyframes backgroundMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        /* 主容器 */
+        .payment-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* 现代化卡片设计 */
+        .payment-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            overflow: hidden;
+            position: relative;
+            margin-top: 20px;
+        }
+
+        /* 装饰性背景元素 */
+        .payment-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1);
+            opacity: 0.05;
+            border-radius: 50%;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+        
+        /* 支付头部 */
+        .payment-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .payment-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+
+        .payment-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .payment-subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            position: relative;
+            z-index: 2;
+        }
+
+        .amount-display {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin: 15px 0;
+            position: relative;
+            z-index: 2;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .payment-icon {
+            font-size: 2.5rem;
+            margin-right: 15px;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* 支付内容区域 */
+        .payment-body {
+            padding: 40px 30px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* 订单详情 */
+        .order-details {
+            background: linear-gradient(135deg, #f8f9ff 0%, #e8f4fd 100%);
+            border: 2px solid rgba(102, 126, 234, 0.1);
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 25px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .order-details::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea, #764ba2, #f093fb);
+        }
+
+        /* 二维码容器 */
+        .qr-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .qr-code {
+            display: inline-block;
+            padding: 25px;
+            background: linear-gradient(135deg, #f8f9ff 0%, #e8f4fd 100%);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin: 20px 0;
+            border: 2px solid rgba(102, 126, 234, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .qr-code:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+
+        .qr-code img {
+            max-width: 220px;
+            height: auto;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        /* 通知卡片 */
+        .payment-notice {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            border: 2px solid rgba(40, 167, 69, 0.2);
+            border-radius: 16px;
+            padding: 20px;
+            margin: 25px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .payment-notice::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #28a745, #20c997, #17a2b8);
+        }
+
+        /* 支付说明 */
+        .qr-tips {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border: 2px solid rgba(255, 193, 7, 0.2);
+            border-radius: 16px;
+            padding: 25px;
+            margin: 25px 0;
+            position: relative;
+        }
+
+        .qr-tips::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #ffc107, #fd7e14, #dc3545);
+        }
+
+        .qr-tips ul {
+            margin: 15px 0 0 0;
+            padding-left: 20px;
+        }
+
+        .qr-tips li {
+            margin: 12px 0;
+            color: #856404;
+            font-weight: 500;
+        }
+
+        /* 确认表单 */
+        .confirm-form {
+            background: linear-gradient(135deg, #f8f9ff 0%, #e8f4fd 100%);
+            border: 2px solid rgba(102, 126, 234, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            margin-top: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .confirm-form::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea, #764ba2, #f093fb);
+        }
+
+        .screenshot-upload {
+            margin: 20px 0;
+        }
+
+        /* 按钮样式 */
+        .btn-modern {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 50px;
+            padding: 15px 40px;
+            font-weight: 600;
+            color: white;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-modern::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn-modern:hover::before {
+            left: 100%;
+        }
+
+        .btn-modern:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+
+        /* 步骤指示器 */
+        .step-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            margin: 10px 15px;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .step-icon {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .step-active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .step-inactive {
+            background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+            color: #6c757d;
+        }
+
+        /* 倒计时 */
+        .countdown {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #dc3545;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        /* 导航栏现代化 */
+        .navbar {
+            background: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .navbar-brand, .nav-link {
+            color: #495057 !important;
+            font-weight: 600;
+        }
+
+        .navbar-brand:hover, .nav-link:hover {
+            color: #667eea !important;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .payment-container {
+                padding: 10px;
+            }
+
+            .payment-header {
+                padding: 30px 20px;
+            }
+
+            .payment-body {
+                padding: 30px 20px;
+            }
+
+            .qr-code img {
+                max-width: 180px;
+            }
+
+            .amount-display {
+                font-size: 2rem;
+            }
+
+            .payment-title {
+                font-size: 1.5rem;
+            }
+
+            .step {
+                margin: 5px 10px;
+                font-size: 0.85rem;
+            }
+
+            .step-icon {
+                width: 30px;
+                height: 30px;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('mails') }}">
+                <i class="fas fa-envelope"></i> 邮件系统
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text">
+                    欢迎，{{ user.username }}
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="payment-container">
+            <!-- 现代化支付卡片 -->
+            <div class="payment-card">
+                <!-- 支付头部 -->
+                <div class="payment-header">
+                    <div class="payment-title">
+                        <i class="fab fa-alipay payment-icon"></i>智能支付
+                    </div>
+                    <div class="payment-subtitle">支付宝商户收款 - 自动充值系统</div>
+                    <div class="amount-display">¥{{ "%.2f"|format(payment.amount) }}</div>
+                </div>
+
+                <!-- 支付主体 -->
+                <div class="payment-body">
+                <!-- 订单详情 -->
+                <div class="order-details">
+                    <h6><i class="fas fa-receipt"></i> 订单详情</h6>
+                    <div class="row">
+                        <div class="col-6"><strong>订单号：</strong></div>
+                        <div class="col-6">{{ order_id }}</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6"><strong>商品：</strong></div>
+                        <div class="col-6">
+                            {% if payment.type == 'balance' %}
+                                余额充值
+                            {% elif payment.type == 'vip' %}
+                                会员服务（30天）
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6"><strong>金额：</strong></div>
+                        <div class="col-6">¥{{ "%.2f"|format(payment.amount) }}</div>
+                    </div>
+                </div>
+                
+                <!-- 支付步骤指示 -->
+                <div class="step-indicator">
+                    <div class="step">
+                        <div class="step-icon step-active">1</div>
+                        扫码支付
+                    </div>
+                    <div class="mx-2">→</div>
+                    <div class="step">
+                        <div class="step-icon step-inactive">2</div>
+                        确认完成
+                    </div>
+                </div>
+                
+                <!-- 二维码区域 -->
+                <div class="qr-container">
+                    <h5><i class="fab fa-alipay text-primary"></i> 支付宝扫码支付</h5>
+
+                    <!-- 支付宝二维码 - 商户收款码 -->
+                    <div class="qr-code">
+                        <img src="/zfb-bissness-pay.jpg" alt="支付宝商户收款码" class="img-fluid">
+                    </div>
+
+                    <!-- 智能充值说明 -->
+                    <div class="payment-notice bg-success bg-opacity-10 p-3 rounded mt-3">
+                        <i class="fas fa-robot text-success"></i>
+                        <strong class="text-success">智能充值系统</strong><br>
+                        支付成功后，系统会自动接收支付宝官方邮件通知并解析充值信息，1-3分钟内自动到账！
+                    </div>
+                    
+                    <div class="qr-tips">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>支付说明：</strong>
+                        <ul class="mt-2 mb-0">
+                            <li>请确保支付金额为 <strong>¥{{ "%.2f"|format(payment.amount) }}</strong></li>
+                            <li>支付时请备注订单号：<strong>{{ order_id }}</strong></li>
+                            <li>支付完成后请点击下方"确认完成支付"按钮</li>
+                            <li>如有疑问，请联系客服</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- 确认支付表单 -->
+                <form action="{{ url_for('pay_complete') }}" method="post" enctype="multipart/form-data" class="confirm-form">
+                    <h6><i class="fas fa-robot text-success"></i> 智能充值确认</h6>
+
+                    <!-- 隐藏字段：固定为支付宝支付 -->
+                    <input type="hidden" name="selected_payment_method" value="alipay">
+
+                    <!-- 支付截图上传（可选） -->
+                    <div class="screenshot-upload">
+                        <label for="payment_screenshot" class="form-label">
+                            <i class="fas fa-camera"></i> 上传支付截图（可选，便于问题排查）
+                        </label>
+                        <input type="file" class="form-control" id="payment_screenshot"
+                               name="payment_screenshot" accept="image/*">
+                        <small class="form-text text-muted">
+                            支持 JPG、PNG 等图片格式。系统会自动处理充值，上传截图仅用于问题排查。
+                        </small>
+                    </div>
+
+                    <!-- 智能充值确认按钮 -->
+                    <div class="text-center mt-4">
+                        <button type="submit" class="btn btn-modern btn-lg">
+                            <i class="fas fa-robot"></i> 我已完成支付，启动智能充值
+                        </button>
+                        <div class="mt-3">
+                            <small class="text-success" style="font-weight: 500;">
+                                <i class="fas fa-info-circle"></i> 系统将自动接收支付宝邮件通知并处理充值，1-3分钟内到账
+                            </small>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- 其他操作 -->
+                <div class="text-center mt-4">
+                    <a href="{{ url_for('pay_select') }}" class="btn btn-outline-light me-3" style="border-radius: 25px; padding: 10px 25px; font-weight: 500; border-color: rgba(102, 126, 234, 0.3); color: #667eea;">
+                        <i class="fas fa-arrow-left"></i> 更换支付方式
+                    </a>
+                    <a href="{{ url_for('recharge') }}" class="btn btn-outline-light" style="border-radius: 25px; padding: 10px 25px; font-weight: 500; border-color: rgba(102, 126, 234, 0.3); color: #667eea;">
+                        <i class="fas fa-times"></i> 取消支付
+                    </a>
+                </div>
+                </div> <!-- 关闭 payment-body -->
+            </div> <!-- 关闭 payment-card -->
+        </div> <!-- 关闭 payment-container -->
+    </div> <!-- 关闭 container -->
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 页面加载动画
+            const container = document.querySelector('.payment-container');
+            container.style.opacity = '0';
+            container.style.transform = 'translateY(20px)';
+            
+            setTimeout(() => {
+                container.style.transition = 'all 0.6s ease';
+                container.style.opacity = '1';
+                container.style.transform = 'translateY(0)';
+            }, 100);
+            
+            // 支付完成按钮确认
+            const completeBtn = document.querySelector('button[type="submit"]');
+            if (completeBtn) {
+                completeBtn.addEventListener('click', function(e) {
+                    const confirmed = confirm(`请确认您已完成支付宝支付！\n\n` +
+                                            `金额：¥{{ "%.2f"|format(payment.amount) }}\n` +
+                                            `订单号：{{ order_id }}\n` +
+                                            `处理方式：智能自动充值（1-3分钟内到账）\n\n` +
+                                            '确认启动智能充值吗？');
+                    if (!confirmed) {
+                        e.preventDefault();
+                    }
+                });
+            }
+            
+            // 文件上传预览
+            const fileInput = document.getElementById('payment_screenshot');
+            if (fileInput) {
+                fileInput.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const fileSize = file.size / 1024 / 1024; // MB
+                        if (fileSize > 5) {
+                            alert('图片文件大小不能超过5MB');
+                            e.target.value = '';
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

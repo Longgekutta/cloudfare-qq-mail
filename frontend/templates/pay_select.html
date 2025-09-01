@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能支付 - {{ user.username }} | 邮箱服务平台</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- 统一色彩系统 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/color-system.css') }}">
+    <!-- 组件库 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+    <!-- 自定义样式 -->
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    
+    <style>
+        /* 现代化支付选择页面样式 */
+        body {
+            background: var(--gradient-hero);
+            min-height: 100vh;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        .payment-container {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* 支付信息卡片 */
+        .payment-info {
+            background: var(--gradient-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: var(--radius-2xl);
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 40px;
+            box-shadow: var(--shadow-2xl);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .payment-info::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--gradient-hero);
+        }
+
+        .amount {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin: 25px 0;
+            background: var(--gradient-success);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .payment-type {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: 10px;
+        }
+
+        .payment-description {
+            color: var(--gray-600);
+            font-size: 1.1rem;
+            margin-top: 15px;
+        }
+
+        /* 支付方式网格 */
+        .payment-methods {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+            margin-top: 40px;
+        }
+
+        /* 支付方式卡片 */
+        .payment-method {
+            background: var(--gradient-card);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: var(--radius-2xl);
+            padding: 40px;
+            text-align: center;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .payment-method::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+            transform: rotate(45deg);
+            transition: all 0.5s;
+            opacity: 0;
+        }
+
+        .payment-method:hover::before {
+            opacity: 1;
+            animation: shimmer 1s ease-in-out;
+        }
+
+        .payment-method:hover {
+            border-color: var(--success-400);
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-2xl);
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .payment-method.recommended {
+            border-color: var(--success-400);
+            background: linear-gradient(135deg, var(--success-50) 0%, rgba(255,255,255,0.95) 100%);
+            position: relative;
+        }
+
+        .payment-method.recommended::after {
+            content: '推荐';
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: var(--gradient-success);
+            color: white;
+            padding: 5px 12px;
+            border-radius: var(--radius-full);
+            font-size: 0.8rem;
+            font-weight: 600;
+            animation: pulse-success 2s infinite;
+        }
+
+        .payment-icon {
+            font-size: 4.5rem;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .payment-method:hover .payment-icon {
+            transform: scale(1.1);
+        }
+
+        .payment-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: var(--gray-800);
+        }
+
+        .payment-subtitle {
+            color: var(--gray-600);
+            font-size: 1rem;
+            margin-bottom: 15px;
+        }
+
+        .payment-features {
+            list-style: none;
+            padding: 0;
+            margin: 20px 0 0 0;
+        }
+
+        .payment-features li {
+            color: var(--success-700);
+            font-size: 0.9rem;
+            margin: 8px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .payment-features li i {
+            margin-right: 8px;
+        }
+
+        /* 支付宝专用样式 */
+        .alipay-method {
+            border-color: var(--primary-300);
+        }
+
+        .alipay-method:hover {
+            border-color: var(--primary-500);
+        }
+
+        .alipay-method .payment-icon {
+            color: var(--primary-600);
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .payment-container {
+                padding: 15px;
+            }
+
+            .payment-info {
+                padding: 30px 20px;
+            }
+
+            .amount {
+                font-size: 2.5rem;
+            }
+
+            .payment-method {
+                padding: 30px 20px;
+            }
+
+            .payment-icon {
+                font-size: 3.5rem;
+            }
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+    </style>
+
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-modern">
+        <div class="container">
+            <a class="navbar-brand navbar-brand-modern" href="{{ url_for('mails') }}">
+                <i class="fas fa-envelope-open-text"></i> 智能邮箱
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="badge badge-balance me-3" id="balance-badge">
+                    <i class="fas fa-wallet"></i> ¥{{ "%.2f"|format(user.balance) }}
+                </span>
+                <span class="navbar-text" style="color: var(--gray-700); font-weight: 500;">
+                    {{ user.username }}
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        <div class="payment-container">
+            <!-- 订单信息卡片 -->
+            <div class="payment-info">
+                <div class="mb-3">
+                    <i class="fas fa-shield-check fa-2x mb-3" style="color: var(--success-500);"></i>
+                    <h2 class="fw-bold mb-2" style="color: var(--gray-800);">安全支付</h2>
+                </div>
+                <div class="amount">¥{{ "%.2f"|format(payment.amount) }}</div>
+                <div class="payment-type">
+                    {% if payment.type == 'balance' %}
+                        <i class="fas fa-wallet me-2"></i>余额充值服务
+                    {% elif payment.type == 'vip' %}
+                        <i class="fas fa-crown me-2"></i>VIP会员服务（30天）
+                    {% endif %}
+                </div>
+                <div class="payment-description">
+                    {% if payment.type == 'balance' %}
+                        充值后可用于发送邮件，按需消费更灵活
+                    {% elif payment.type == 'vip' %}
+                        享受每月100条免费邮件及专属特权
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- 订单详情卡片 -->
+            <div class="card-premium mb-4">
+                <div class="card-header-premium">
+                    <h5 class="fw-bold mb-0">
+                        <i class="fas fa-receipt me-2" style="color: var(--primary-600);"></i>
+                        订单详情
+                    </h5>
+                </div>
+                <div class="card-body-premium">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="d-flex justify-content-between align-items-center p-3 rounded-3" style="background: var(--gray-50);">
+                                <span class="fw-500 text-muted">商品名称</span>
+                                <span class="fw-bold" style="color: var(--gray-800);">
+                                    {% if payment.type == 'balance' %}
+                                        余额充值
+                                    {% elif payment.type == 'vip' %}
+                                        VIP会员服务
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex justify-content-between align-items-center p-3 rounded-3" style="background: var(--success-50);">
+                                <span class="fw-500 text-muted">支付金额</span>
+                                <span class="fw-bold price-small">¥{{ "%.2f"|format(payment.amount) }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex justify-content-between align-items-center p-3 rounded-3" style="background: var(--primary-50);">
+                                <span class="fw-500 text-muted">服务期限</span>
+                                <span class="fw-bold" style="color: var(--primary-700);">
+                                    {% if payment.type == 'balance' %}
+                                        永久有效
+                                    {% elif payment.type == 'vip' %}
+                                        30天
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex justify-content-between align-items-center p-3 rounded-3" style="background: var(--warning-50);">
+                                <span class="fw-500 text-muted">下单时间</span>
+                                <span class="fw-bold" style="color: var(--warning-700);">{{ payment.timestamp[:19] }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+                </div>
+            </div>
+            
+            <!-- 支付方式选择 -->
+            <div class="text-center mb-4">
+                <h4 class="fw-bold mb-3" style="color: var(--gray-800);">
+                    <i class="fas fa-credit-card me-2" style="color: var(--primary-600);"></i>
+                    选择支付方式
+                </h4>
+                <p class="text-muted fs-5">安全便捷的支付体验，多重保障</p>
+            </div>
+
+            <div class="payment-methods">
+                <!-- 支付宝支付 - 推荐支付方式 -->
+                <a href="{{ url_for('pay_confirm', payment_method='alipay') }}" class="payment-method alipay-method recommended">
+                    <div class="payment-icon">
+                        <i class="fab fa-alipay"></i>
+                    </div>
+                    <div class="payment-title">支付宝支付</div>
+                    <div class="payment-subtitle">智能自动充值系统</div>
+                    <ul class="payment-features">
+                        <li><i class="fas fa-check-circle"></i> 支付后1-3分钟自动到账</li>
+                        <li><i class="fas fa-check-circle"></i> 官方邮件通知确认</li>
+                        <li><i class="fas fa-check-circle"></i> 智能解析充值金额</li>
+                        <li><i class="fas fa-check-circle"></i> 24小时客服支持</li>
+                    </ul>
+                    <div class="mt-3">
+                        <span class="badge" style="background: var(--success-100); color: var(--success-700);">
+                            <i class="fas fa-robot"></i> AI智能处理
+                        </span>
+                        <span class="badge ms-2" style="background: var(--primary-100); color: var(--primary-700);">
+                            <i class="fas fa-shield-alt"></i> 安全可靠
+                        </span>
+                    </div>
+                </a>
+
+                <!-- 微信支付暂时不可用提示 -->
+                <div class="payment-method" style="opacity: 0.5; cursor: not-allowed; border-color: var(--gray-300);">
+                    <div class="payment-icon" style="color: var(--gray-400);">
+                        <i class="fab fa-weixin"></i>
+                    </div>
+                    <div class="payment-title" style="color: var(--gray-500);">微信支付</div>
+                    <div class="payment-subtitle" style="color: var(--gray-400);">暂时不可用</div>
+                    <ul class="payment-features">
+                        <li style="color: var(--gray-400);"><i class="fas fa-clock"></i> 功能开发中</li>
+                        <li style="color: var(--gray-400);"><i class="fas fa-clock"></i> 敬请期待</li>
+                    </ul>
+                    <div class="mt-3">
+                        <span class="badge" style="background: var(--gray-100); color: var(--gray-500);">
+                            <i class="fas fa-tools"></i> 开发中
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 安全提示 -->
+            <div class="card-premium mt-4">
+                <div class="card-body-premium text-center">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <i class="fas fa-shield-alt fa-2x mb-2" style="color: var(--success-600);"></i>
+                            <h6 class="fw-bold" style="color: var(--success-700);">安全保障</h6>
+                            <small class="text-muted">银行级加密传输</small>
+                        </div>
+                        <div class="col-md-4">
+                            <i class="fas fa-clock fa-2x mb-2" style="color: var(--primary-600);"></i>
+                            <h6 class="fw-bold" style="color: var(--primary-700);">快速到账</h6>
+                            <small class="text-muted">1-3分钟自动处理</small>
+                        </div>
+                        <div class="col-md-4">
+                            <i class="fas fa-headset fa-2x mb-2" style="color: var(--warning-600);"></i>
+                            <h6 class="fw-bold" style="color: var(--warning-700);">客服支持</h6>
+                            <small class="text-muted">24小时在线服务</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 操作按钮 -->
+            <div class="text-center mt-4">
+                <div class="d-flex justify-content-center gap-3 flex-wrap">
+                    <a href="{{ url_for('recharge') }}" class="btn btn-base btn-secondary-modern">
+                        <i class="fas fa-arrow-left"></i> 返回充值页面
+                    </a>
+                    <a href="{{ url_for('mails') }}" class="btn btn-base btn-payment">
+                        <i class="fas fa-envelope-open-text"></i> 邮件管理
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- 页面加载动画 -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 添加入场动画
+            const container = document.querySelector('.payment-container');
+            container.style.opacity = '0';
+            container.style.transform = 'translateY(20px)';
+            
+            setTimeout(() => {
+                container.style.transition = 'all 0.6s ease';
+                container.style.opacity = '1';
+                container.style.transform = 'translateY(0)';
+            }, 100);
+        });
+
+        // 动态调整余额显示椭圆形宽度
+        function adjustBalanceBadgeWidth() {
+            const balanceBadge = document.getElementById('balance-badge');
+            if (balanceBadge) {
+                // 创建临时元素测量文字宽度
+                const tempSpan = document.createElement('span');
+                tempSpan.style.visibility = 'hidden';
+                tempSpan.style.position = 'absolute';
+                tempSpan.style.fontSize = window.getComputedStyle(balanceBadge).fontSize;
+                tempSpan.style.fontWeight = window.getComputedStyle(balanceBadge).fontWeight;
+                tempSpan.style.fontFamily = window.getComputedStyle(balanceBadge).fontFamily;
+                tempSpan.textContent = balanceBadge.textContent;
+
+                document.body.appendChild(tempSpan);
+                const textWidth = tempSpan.offsetWidth;
+                document.body.removeChild(tempSpan);
+
+                // 设置最小宽度和动态宽度
+                const minWidth = 80;
+                const padding = 32; // 左右padding总和
+                const dynamicWidth = Math.max(minWidth, textWidth + padding);
+
+                balanceBadge.style.minWidth = dynamicWidth + 'px';
+            }
+        }
+
+        // 页面加载完成后调整宽度
+        document.addEventListener('DOMContentLoaded', adjustBalanceBadgeWidth);
+    </script>
+</body>
+</html>
