@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人资料 - 邮箱服务</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 自定义CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fas fa-envelope"></i> 邮箱服务
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('index') }}"><i class="fas fa-home"></i> 首页</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('mails') }}"><i class="fas fa-envelope-open-text"></i> 邮件列表</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user"></i> {{ user.username }}
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item active" href="{{ url_for('profile') }}"><i class="fas fa-user-cog"></i> 个人资料</a></li>
+                            {% if user.is_admin %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin_users') }}"><i class="fas fa-users-cog"></i> 用户管理</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin_domains') }}"><i class="fas fa-network-wired"></i> 域名管理</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin_codes') }}"><i class="fas fa-key"></i> 注册码管理</a></li>
+                            {% endif %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> 退出登录</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容 -->
+    <main class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <h1><i class="fas fa-user-cog"></i> 个人资料</h1>
+                
+                <!-- 用户信息卡片 -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h3>基本信息</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="profileForm">
+                            <div class="mb-3">
+                                <label for="username" class="form-label">用户名</label>
+                                <input type="text" class="form-control" id="username" name="username" value="{{ user.username }}" readonly>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">会员状态</label>
+                                <div>
+                                    {% if user.is_vip %}
+                                    <span class="fw-bold" style="color: #d97706;">
+                                        <i class="fas fa-crown me-1"></i>会员状态：VIP会员
+                                    </span>
+                                    {% else %}
+                                    <span class="text-muted fw-bold">会员状态：普通用户</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">账户余额</label>
+                                <div>
+                                    <span class="fs-5">¥{{ user.balance }}</span>
+                                </div>
+                            </div>
+
+                        </form>
+                    </div>
+                </div>
+
+                <!-- 邮箱绑定卡片 -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0"><i class="fas fa-envelope"></i> 邮箱绑定</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">绑定新邮箱</label>
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <input type="email" class="form-control" id="bindEmail" placeholder="输入要绑定的邮箱地址">
+                                </div>
+                                <div class="col-md-4">
+                                    <button type="button" class="btn btn-outline-primary w-100" onclick="sendVerificationCode()" id="sendCodeBtn">
+                                        <span id="sendCodeText">发送验证码</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="mt-2" id="verificationSection" style="display: none;">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <input type="text" class="form-control" id="verificationCode" placeholder="输入6位验证码" maxlength="6">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <button type="button" class="btn btn-success w-100" onclick="verifyAndBindEmail()">
+                                            确认绑定
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 已绑定邮箱列表 -->
+                        <div class="mb-3">
+                            <label class="form-label">已绑定邮箱</label>
+                            <div id="boundEmailsList">
+                                {% if bound_emails %}
+                                    {% for email in bound_emails %}
+                                        <div class="badge bg-success me-1 mt-1">
+                                            <i class="fas fa-envelope"></i> {{ email.email_address }}
+                                        </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <small class="text-muted">暂无绑定邮箱，绑定后可用于找回密码</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 修改密码卡片 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>修改密码</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="passwordForm">
+                            <div class="mb-3">
+                                <label for="current_password" class="form-label">当前密码</label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="current_password" name="current_password" required>
+                                    <button class="btn btn-outline-secondary" type="button" id="toggleCurrentPassword">
+                                        <i class="fas fa-eye" id="toggleCurrentPasswordIcon"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="new_password" class="form-label">新密码</label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="new_password" name="new_password" required>
+                                    <button class="btn btn-outline-secondary" type="button" id="toggleNewPassword">
+                                        <i class="fas fa-eye" id="toggleNewPasswordIcon"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="confirm_password" class="form-label">确认新密码</label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                                    <button class="btn btn-outline-secondary" type="button" id="toggleConfirmPassword">
+                                        <i class="fas fa-eye" id="toggleConfirmPasswordIcon"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-warning"><i class="fas fa-key"></i> 修改密码</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-dark text-white text-center py-3 mt-5">
+        <div class="container">
+            <p>&copy; 2025 邮箱服务. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- 自定义JS -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script>
+        // 保存个人信息
+        document.getElementById('profileForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            // 这里应该发送AJAX请求到后端API来更新用户信息
+            alert('保存个人信息功能需要后端API支持');
+        });
+
+        // 修改密码
+        document.getElementById('passwordForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            // 获取密码输入
+            var currentPassword = document.getElementById('current_password').value;
+            var newPassword = document.getElementById('new_password').value;
+            var confirmPassword = document.getElementById('confirm_password').value;
+            
+            // 检查新密码和确认密码是否匹配
+            if (newPassword !== confirmPassword) {
+                alert('新密码和确认密码不匹配');
+                return;
+            }
+            
+            // 发送修改密码请求
+            fetch('/change_password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    current_password: currentPassword,
+                    new_password: newPassword,
+                    confirm_password: confirmPassword
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('密码修改成功！');
+                    // 清空表单
+                    const form = document.getElementById('changePasswordForm');
+                    if (form) {
+                        form.reset();
+                    }
+                } else {
+                    alert('修改失败：' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('修改失败：' + error.message);
+            });
+        });
+
+        // 邮箱绑定相关功能
+        let countdown = 0;
+        let countdownTimer = null;
+
+        // 发送验证码
+        function sendVerificationCode() {
+            const email = document.getElementById('bindEmail').value.trim();
+            if (!email) {
+                alert('请输入邮箱地址');
+                return;
+            }
+
+            if (!isValidEmail(email)) {
+                alert('请输入有效的邮箱地址');
+                return;
+            }
+
+            // 发送验证码请求
+            fetch('/send_verification_code', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: email,
+                    type: 'email_binding'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('验证码已发送到您的邮箱');
+                    document.getElementById('verificationSection').style.display = 'block';
+                    startCountdown();
+                } else {
+                    alert('发送失败：' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('发送失败：' + error.message);
+            });
+        }
+
+        // 验证并绑定邮箱
+        function verifyAndBindEmail() {
+            const email = document.getElementById('bindEmail').value.trim();
+            const code = document.getElementById('verificationCode').value.trim();
+
+            if (!email || !code) {
+                alert('请输入邮箱地址和验证码');
+                return;
+            }
+
+            fetch('/verify_and_bind_email', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: email,
+                    code: code
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('邮箱绑定成功！');
+                    location.reload();
+                } else {
+                    alert('绑定失败：' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('绑定失败：' + error.message);
+            });
+        }
+
+        // 开始倒计时
+        function startCountdown() {
+            countdown = 60;
+            const btn = document.getElementById('sendCodeBtn');
+            const text = document.getElementById('sendCodeText');
+
+            btn.disabled = true;
+
+            countdownTimer = setInterval(() => {
+                text.textContent = `${countdown}秒后重发`;
+                countdown--;
+
+                if (countdown < 0) {
+                    clearInterval(countdownTimer);
+                    btn.disabled = false;
+                    text.textContent = '发送验证码';
+                }
+            }, 1000);
+        }
+
+        // 验证邮箱格式
+        function isValidEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+
+        // 密码显示/隐藏切换功能
+        function setupPasswordToggle(inputId, buttonId, iconId) {
+            document.getElementById(buttonId).addEventListener('click', function() {
+                const passwordInput = document.getElementById(inputId);
+                const toggleIcon = document.getElementById(iconId);
+
+                if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    toggleIcon.classList.remove('fa-eye');
+                    toggleIcon.classList.add('fa-eye-slash');
+                } else {
+                    passwordInput.type = 'password';
+                    toggleIcon.classList.remove('fa-eye-slash');
+                    toggleIcon.classList.add('fa-eye');
+                }
+            });
+        }
+
+        // 初始化所有密码切换按钮
+        setupPasswordToggle('current_password', 'toggleCurrentPassword', 'toggleCurrentPasswordIcon');
+        setupPasswordToggle('new_password', 'toggleNewPassword', 'toggleNewPasswordIcon');
+        setupPasswordToggle('confirm_password', 'toggleConfirmPassword', 'toggleConfirmPasswordIcon');
+    </script>
+</body>
+</html>

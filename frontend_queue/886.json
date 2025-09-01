@@ -1,0 +1,20 @@
+{
+  "id": "886",
+  "timestamp": "2025-08-28T21:59:29.647704",
+  "info": {
+    "from": "3@shiep.edu.kg",
+    "to": "3@shiep.edu.kg",
+    "subject": "Re: Re: Fw: Important, funds will be debited from your account",
+    "date": "Thu, 28 Aug 2025 13:59:05 +0000",
+    "message_id": "<01060198f0f99773-6fbf3677-3b0d-4411-ae35-29417770769c-000000@ap-northeast-1.amazonses.com>",
+    "content_type": "multipart/alternative",
+    "forwarded_to": "2846117874@qq.com",
+    "forwarded_from": "3@shiep.edu.kg 2846117874@qq.com"
+  },
+  "content": {
+    "text": "你好",
+    "html_path": "./received_emails\\20250828_215929_Re Re Fw Important funds will _886_display.html",
+    "attachments": []
+  },
+  "processed_time": "2025-08-28T21:59:29.681065"
+}

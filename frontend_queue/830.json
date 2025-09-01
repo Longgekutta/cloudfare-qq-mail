@@ -1,0 +1,31 @@
+{
+  "id": "830",
+  "timestamp": "2025-08-24T16:35:06.601766",
+  "info": {
+    "from": "\"高升\" <2846117874@qq.com>",
+    "to": "\"3\" <3@shiep.edu.kg>",
+    "subject": "Fw: Verify your email to create your Oracle Cloud account",
+    "date": "Sun, 24 Aug 2025 16:34:25 +0800",
+    "message_id": "<tencent_2CD77009A9C4338EB9BC6F81260288923406@qq.com>",
+    "content_type": "multipart/mixed",
+    "forwarded_to": "2846117874@qq.com",
+    "forwarded_from": "3@shiep.edu.kg 2846117874@qq.com"
+  },
+  "content": {
+    "text": "---Original---\r\nFrom: \"Oracle Cloud\"<noreply@verify.signup.us-ashburn-1.oci.oraclecloud.com&gt;\r\nDate: Sun, Aug 24, 2025 15:58 PM\r\nTo: \"2846117874\"<2846117874@qq.com&gt;;\r\nSubject: Verify your email to create your Oracle Cloud account\r\n\r\n\r\n                                                                    \r\n                                    \r\nHello longge, \r\n\r\n                \r\nThanks for your interest in creating an Oracle Cloud account. To create your account, please verify your email address by clicking below.\r\n\r\n\r\n\r\n\r\nThanks,\r\n\r\n\r\nThe Oracle Cloud Team\r\n\r\n\r\n                    \r\n                                                                            Please do not reply directly to this email.\r\n                \r\nCopyright © 2024 Oracle.  All rights reserved.                Contact Us | Legal Notices and Terms of Use | Privacy Statement",
+    "html_path": "./received_emails\\20250824_163506_Fw Verify your email to create_830_display.html",
+    "attachments": [
+      {
+        "filename": "Screenshot_2025-08-24-12-43-44-444_com.bybit.app.jpg",
+        "size": 725808,
+        "content_type": "application/octet-stream"
+      },
+      {
+        "filename": "涨停因子主图_0.tn6",
+        "size": 8496,
+        "content_type": "application/octet-stream"
+      }
+    ]
+  },
+  "processed_time": "2025-08-24T16:35:06.705958"
+}

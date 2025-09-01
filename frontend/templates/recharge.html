@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能充值 - {{ user.username }} | 邮箱服务平台</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- 统一色彩系统 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/color-system.css') }}">
+    <!-- 组件库 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+    <!-- 自定义样式 -->
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-modern">
+        <div class="container">
+            <a class="navbar-brand navbar-brand-modern" href="{{ url_for('mails') }}">
+                <i class="fas fa-envelope-open-text"></i> 智能邮箱
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="badge badge-balance me-3" id="balance-badge">
+                    <i class="fas fa-wallet"></i> ¥{{ "%.2f"|format(user.balance) }}
+                </span>
+                {% if user.is_vip %}
+                <span class="badge badge-vip me-3">
+                    <i class="fas fa-crown"></i> VIP
+                </span>
+                {% endif %}
+                <span class="navbar-text me-3" style="color: var(--gray-700); font-weight: 500;">
+                    {{ user.username }}
+                </span>
+                <a class="btn btn-base btn-secondary-modern btn-sm" href="{{ url_for('logout') }}">
+                    <i class="fas fa-sign-out-alt"></i> 退出
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        <!-- Flash消息显示 -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show" role="alert">
+                        <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-triangle' }} me-2"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- 账户概览 -->
+        <div class="row mb-5">
+            <div class="col-12">
+                <div class="card-premium">
+                    <div class="card-header-premium text-center">
+                        <h2 class="fw-bold mb-2">
+                            <i class="fas fa-wallet me-2" style="color: var(--success-600);"></i>
+                            账户概览
+                        </h2>
+                        <p class="text-muted mb-0">管理您的余额和会员状态</p>
+                    </div>
+                    <div class="card-body-premium">
+                        <div class="row g-4">
+                            <!-- 当前余额 -->
+                            <div class="col-lg-4 col-md-6">
+                                <div class="text-center p-4 rounded-3 h-100" style="background: var(--success-50); border: 1px solid var(--success-200);">
+                                    <div class="mb-3">
+                                        <i class="fas fa-coins fa-3x" style="color: var(--success-500);"></i>
+                                    </div>
+                                    <div class="price-display mb-2" style="color: var(--success-600);">¥{{ "%.2f"|format(user.balance) }}</div>
+                                    <h6 class="fw-bold mb-0" style="color: var(--gray-800);">当前余额</h6>
+                                    <small class="text-muted">可用于邮件服务</small>
+                                </div>
+                            </div>
+
+                            <!-- 会员状态 -->
+                            <div class="col-lg-4 col-md-6">
+                                <div class="text-center p-4 rounded-3 h-100"
+                                     style="background: {% if user.is_vip %}var(--warning-50){% else %}var(--primary-50){% endif %}; border: 1px solid {% if user.is_vip %}var(--warning-200){% else %}var(--primary-200){% endif %};">
+                                    <div class="mb-3">
+                                        <i class="fas {% if user.is_vip %}fa-crown{% else %}fa-user{% endif %} fa-3x" style="color: {% if user.is_vip %}var(--warning-500){% else %}var(--primary-500){% endif %};"></i>
+                                    </div>
+                                    <h3 class="fw-bold mb-2" style="color: var(--gray-800);">
+                                        {% if user.is_vip %}VIP会员{% else %}普通用户{% endif %}
+                                    </h3>
+                                    <h6 class="fw-bold mb-1" style="color: var(--gray-700);">会员状态</h6>
+                                    {% if user.is_vip and user.vip_expire_date %}
+                                        <small class="text-muted">到期：{{ user.vip_expire_date.strftime('%Y-%m-%d') }}</small>
+                                    {% else %}
+                                        <small class="text-muted">升级享受更多特权</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- 使用统计 -->
+                            <div class="col-lg-4 col-md-12">
+                                <div class="text-center p-4 rounded-3 h-100" style="background: var(--primary-50); border: 1px solid var(--primary-200);">
+                                    <div class="mb-3">
+                                        <i class="fas fa-chart-line fa-3x" style="color: var(--primary-500);"></i>
+                                    </div>
+                                    {% if user.is_vip %}
+                                        <h3 class="fw-bold mb-2" style="color: var(--gray-800);">{{ user.vip_email_count or 0 }}/50</h3>
+                                        <h6 class="fw-bold mb-1" style="color: var(--gray-700);">VIP期间已发送</h6>
+                                        {% set vip_count = user.vip_email_count or 0 %}
+                                        {% if vip_count < 50 %}
+                                            <small class="text-success">剩余{{ 50 - vip_count }}条免费</small>
+                                            <br><small class="text-muted">下条费用：¥0.00</small>
+                                        {% else %}
+                                            <small class="text-warning">超额¥0.20/条</small>
+                                            <br><small class="text-muted">下条费用：¥0.20</small>
+                                        {% endif %}
+                                    {% else %}
+                                        <h3 class="fw-bold mb-2" style="color: var(--gray-800);">¥0.40/条</h3>
+                                        <h6 class="fw-bold mb-1" style="color: var(--gray-700);">邮件费用</h6>
+                                        <small class="text-muted">下条费用：¥0.40</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 充值服务 -->
+        <div class="row g-4">
+            <!-- 余额充值 -->
+            <div class="col-lg-6">
+                <div class="card-premium h-100">
+                    <div class="card-header-premium text-center">
+                        <h4 class="fw-bold mb-2">
+                            <i class="fas fa-coins me-2" style="color: var(--success-600);"></i>
+                            余额充值
+                        </h4>
+                        <p class="text-muted mb-0">按需充值，灵活使用</p>
+                    </div>
+                    <div class="card-body-premium">
+                        <div class="mb-4">
+                            <label class="form-label-modern">选择充值金额</label>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <button type="button" onclick="goToXianyuRecharge(1)" class="btn btn-base btn-recharge w-100">
+                                        ¥1
+                                        <small class="d-block mt-1" style="font-size: 0.75rem; opacity: 0.8;">约2条邮件</small>
+                                    </button>
+                                </div>
+                                <div class="col-6">
+                                    <button type="button" onclick="goToXianyuRecharge(5)" class="btn btn-base btn-recharge w-100">
+                                        ¥5
+                                        <small class="d-block mt-1" style="font-size: 0.75rem; opacity: 0.8;">约12条邮件</small>
+                                    </button>
+                                </div>
+                                <div class="col-6">
+                                    <button type="button" onclick="goToXianyuRecharge(10)" class="btn btn-base btn-recharge w-100">
+                                        ¥10
+                                        <small class="d-block mt-1" style="font-size: 0.75rem; opacity: 0.8;">约25条邮件</small>
+                                    </button>
+                                </div>
+                                <div class="col-6">
+                                    <button type="button" onclick="goToXianyuRecharge(20)" class="btn btn-base btn-recharge w-100">
+                                        ¥20
+                                        <small class="d-block mt-1" style="font-size: 0.75rem; opacity: 0.8;">约50条邮件</small>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 充值码充值 -->
+                        <div class="mb-4">
+                            <label class="form-label-modern">使用充值码</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control form-control-modern" id="rechargeCode"
+                                       placeholder="输入充值码" maxlength="20">
+                                <button type="button" class="btn btn-base btn-success" onclick="redeemCode()">
+                                    <i class="fas fa-ticket-alt"></i> 兑换
+                                </button>
+                            </div>
+                            <small class="text-muted mt-1">
+                                <i class="fas fa-info-circle"></i>
+                                充值码可在咸鱼购买获得，兑换后立即到账
+                            </small>
+                        </div>
+
+                        <div class="alert alert-success-modern">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>充值说明：</strong>
+                            <br>• 点击金额按钮跳转咸鱼购买充值码
+                            <br>• <strong>咸鱼商品为自动发货，付款后立即获得充值码，无需等待</strong>
+                            <br>• 获得充值码后在此页面兑换即可到账
+                            <br>• 发送邮件费用：普通用户¥0.40/条，VIP会员前50条免费，超额¥0.20/条
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIP会员服务 -->
+            <div class="col-lg-6">
+                <div class="card-premium h-100 position-relative">
+                    <!-- VIP装饰 -->
+                    <div class="position-absolute top-0 end-0 p-3">
+                        <i class="fas fa-crown opacity-25" style="color: var(--warning-400); font-size: 1.2rem;"></i>
+                    </div>
+
+                    <div class="card-header-premium text-center">
+                        <h4 class="fw-bold mb-2">
+                            <i class="fas fa-crown me-2" style="color: var(--warning-600);"></i>
+                            VIP会员服务
+                        </h4>
+                        <p class="text-muted mb-0">专享特权，超值体验</p>
+                    </div>
+
+                    <div class="card-body-premium">
+                        {% if not user.is_vip %}
+                            <div class="text-center mb-4">
+                                <div class="price-display" style="color: var(--warning-600);">¥10</div>
+                                <p class="text-muted fs-5 mb-0">/月</p>
+                                <div class="mt-2">
+                                    <span class="badge" style="background: var(--warning-100); color: var(--warning-700);">
+                                        <i class="fas fa-fire"></i> 超值优惠
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <h6 class="fw-bold mb-3" style="color: var(--gray-800);">会员特权</h6>
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <div class="d-flex align-items-center p-2 rounded-2" style="background: var(--success-50);">
+                                            <i class="fas fa-check-circle me-3" style="color: var(--success-600);"></i>
+                                            <span class="fw-500">每月前50条邮件免费</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="d-flex align-items-center p-2 rounded-2" style="background: var(--primary-50);">
+                                            <i class="fas fa-check-circle me-3" style="color: var(--primary-600);"></i>
+                                            <span class="fw-500">超出部分仅需¥0.20/条</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="d-flex align-items-center p-2 rounded-2" style="background: var(--warning-50);">
+                                            <i class="fas fa-check-circle me-3" style="color: var(--warning-600);"></i>
+                                            <span class="fw-500">专属VIP标识</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="d-flex align-items-center p-2 rounded-2" style="background: var(--success-50);">
+                                            <i class="fas fa-check-circle me-3" style="color: var(--success-600);"></i>
+                                            <span class="fw-500">优先客服支持</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <form method="POST" action="{{ url_for('purchase_vip') }}" onsubmit="return confirmVipPurchase()">
+                                <button type="submit" class="btn btn-base btn-promotion w-100 btn-lg">
+                                    <i class="fas fa-crown"></i> 立即开通VIP会员
+                                </button>
+                            </form>
+
+                            <div class="text-center mt-3">
+                                <small class="text-muted">
+                                    <i class="fas fa-shield-alt"></i> 安全支付 · 即时生效
+                                </small>
+                            </div>
+                        {% else %}
+                            <div class="text-center">
+                                <div class="mb-4">
+                                    <div class="d-inline-flex align-items-center justify-content-center rounded-circle mb-3"
+                                         style="width: 60px; height: 60px; background: var(--warning-100); color: var(--warning-600);">
+                                        <i class="fas fa-crown" style="font-size: 1.5rem;"></i>
+                                    </div>
+                                    <h5 class="fw-bold" style="color: var(--warning-700);">您已是VIP会员</h5>
+                                    {% if user.vip_expire_date %}
+                                        <p class="text-muted">到期时间：{{ user.vip_expire_date.strftime('%Y年%m月%d日') }}</p>
+                                    {% endif %}
+                                </div>
+
+                                <form method="POST" action="{{ url_for('purchase_vip') }}" onsubmit="return confirmVipPurchase()">
+                                    <button type="submit" class="btn btn-base btn-promotion w-100">
+                                        <i class="fas fa-sync-alt"></i> 续费VIP会员
+                                    </button>
+                                </form>
+
+                                <div class="mt-3">
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle"></i> 续费后有效期将延长30天
+                                    </small>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 充值记录与使用统计 -->
+        <div class="row mt-5 g-4">
+            <div class="col-lg-8">
+                <div class="card-premium">
+                    <div class="card-header-premium">
+                        <h5 class="fw-bold mb-0">
+                            <i class="fas fa-history me-2" style="color: var(--primary-600);"></i>
+                            充值记录
+                        </h5>
+                    </div>
+                    <div class="card-body-premium">
+                        {% if recharge_history %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead style="background: var(--gray-50);">
+                                        <tr>
+                                            <th class="fw-bold" style="color: var(--gray-700);">时间</th>
+                                            <th class="fw-bold" style="color: var(--gray-700);">类型</th>
+                                            <th class="fw-bold" style="color: var(--gray-700);">金额</th>
+                                            <th class="fw-bold" style="color: var(--gray-700);">状态</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for record in recharge_history %}
+                                        <tr>
+                                            <td class="fw-500">{{ record.created_at.strftime('%m-%d %H:%M') }}</td>
+                                            <td>
+                                                {% if record.type == 'vip' %}
+                                                    <span class="badge" style="background: var(--warning-100); color: var(--warning-700);">
+                                                        <i class="fas fa-crown"></i> VIP会员
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge" style="background: var(--success-100); color: var(--success-700);">
+                                                        <i class="fas fa-coins"></i> 余额充值
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="fw-bold" style="color: var(--success-600);">¥{{ "%.2f"|format(record.amount) }}</td>
+                                            <td>
+                                                <span class="badge" style="background: var(--success-100); color: var(--success-700);">
+                                                    <i class="fas fa-check"></i> 已完成
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-receipt fa-3x mb-3 opacity-25" style="color: var(--gray-400);"></i>
+                                <p class="text-muted fs-5">暂无充值记录</p>
+                                <p class="text-muted">完成首次充值后，记录将显示在这里</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card-premium h-100">
+                    <div class="card-header-premium">
+                        <h6 class="fw-bold mb-0">
+                            <i class="fas fa-chart-pie me-2" style="color: var(--warning-600);"></i>
+                            使用统计
+                        </h6>
+                    </div>
+                    <div class="card-body-premium">
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-muted">本月邮件</span>
+                                <span class="fw-bold">{{ email_stats.total_count or 0 }}条</span>
+                            </div>
+
+                            <!-- 三色柱状图 -->
+                            <div class="progress" style="height: 12px; border-radius: 6px;">
+                                {% set total = email_stats.total_count or 0 %}
+                                {% if total > 0 %}
+                                    {% set normal_percent = (email_stats.normal_count / total * 100) %}
+                                    {% set vip_free_percent = (email_stats.vip_free_count / total * 100) %}
+                                    {% set vip_over_percent = (email_stats.vip_over_count / total * 100) %}
+
+                                    <!-- 普通用户¥0.4/条 - 灰色 -->
+                                    {% if email_stats.normal_count > 0 %}
+                                    <div class="progress-bar" style="background-color: #6c757d; width: {{ normal_percent }}%;"
+                                         title="普通用户发送：{{ email_stats.normal_count }}条 (¥0.4/条)"></div>
+                                    {% endif %}
+
+                                    <!-- VIP免费 - 金色 -->
+                                    {% if email_stats.vip_free_count > 0 %}
+                                    <div class="progress-bar" style="background-color: #ffd700; width: {{ vip_free_percent }}%;"
+                                         title="VIP免费发送：{{ email_stats.vip_free_count }}条"></div>
+                                    {% endif %}
+
+                                    <!-- VIP超额¥0.2/条 - 浅黄色 -->
+                                    {% if email_stats.vip_over_count > 0 %}
+                                    <div class="progress-bar" style="background-color: #fff3cd; width: {{ vip_over_percent }}%;"
+                                         title="VIP超额发送：{{ email_stats.vip_over_count }}条 (¥0.2/条)"></div>
+                                    {% endif %}
+                                {% else %}
+                                    <div class="progress-bar" style="background-color: #e9ecef; width: 100%;"
+                                         title="本月暂无邮件发送"></div>
+                                {% endif %}
+                            </div>
+
+                            <!-- 图例 -->
+                            <div class="mt-2 d-flex flex-wrap gap-2" style="font-size: 0.8em;">
+                                {% if email_stats.normal_count > 0 %}
+                                <span><span style="display: inline-block; width: 10px; height: 10px; background-color: #6c757d; border-radius: 2px; margin-right: 3px;"></span>普通：{{ email_stats.normal_count }}条</span>
+                                {% endif %}
+                                {% if email_stats.vip_free_count > 0 %}
+                                <span><span style="display: inline-block; width: 10px; height: 10px; background-color: #ffd700; border-radius: 2px; margin-right: 3px;"></span>免费：{{ email_stats.vip_free_count }}条</span>
+                                {% endif %}
+                                {% if email_stats.vip_over_count > 0 %}
+                                <span><span style="display: inline-block; width: 10px; height: 10px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 2px; margin-right: 3px;"></span>超额：{{ email_stats.vip_over_count }}条</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-muted">账户余额</span>
+                                <span class="fw-bold price-small">¥{{ "%.2f"|format(user.balance) }}</span>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar" style="background: var(--gradient-primary); width: {{ (user.balance / 50 * 100) if user.balance <= 50 else 100 }}%;"></div>
+                            </div>
+                            <small class="text-muted">建议保持¥2以上余额</small>
+                        </div>
+
+                        <div class="text-center">
+                            <a href="{{ url_for('mails') }}" class="btn btn-base btn-payment btn-sm w-100">
+                                <i class="fas fa-envelope-open-text"></i> 开始发送邮件
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 消费记录 -->
+        <div class="row mt-5">
+            <div class="col-12">
+                <div class="card-premium">
+                    <div class="card-header-premium">
+                        <h5 class="fw-bold mb-0">
+                            <i class="fas fa-receipt me-2" style="color: var(--primary-600);"></i>
+                            消费记录
+                        </h5>
+                    </div>
+                    <div class="card-body-premium">
+                        {% if billing_history %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead style="background: var(--gray-50);">
+                                        <tr>
+                                            <th class="fw-bold" style="color: var(--gray-700);">时间</th>
+                                            <th class="fw-bold" style="color: var(--gray-700);">邮件主题</th>
+                                            <th class="fw-bold" style="color: var(--gray-700);">收件人</th>
+                                            <th class="fw-bold" style="color: var(--gray-700);">费用</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for record in billing_history %}
+                                        <tr>
+                                            <td class="fw-500">{{ record.created_at.strftime('%m-%d %H:%M') }}</td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fas fa-envelope me-2 text-muted"></i>
+                                                    <span>{{ record.subject[:30] + '...' if record.subject and record.subject|length > 30 else record.subject or '无主题' }}</span>
+                                                </div>
+                                            </td>
+                                            <td class="text-muted">{{ record.recipient if record.recipient else '-' }}</td>
+                                            <td>
+                                                {% if record.cost > 0 %}
+                                                    <span class="fw-bold" style="color: var(--warning-600);">¥{{ "%.2f"|format(record.cost) }}</span>
+                                                {% else %}
+                                                    <span class="badge" style="background: var(--success-100); color: var(--success-700);">
+                                                        <i class="fas fa-gift"></i> 免费
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-envelope-open fa-3x mb-3 opacity-25" style="color: var(--gray-400);"></i>
+                                <p class="text-muted fs-5">暂无消费记录</p>
+                                <p class="text-muted">发送邮件后，消费记录将显示在这里</p>
+                                <div class="mt-4">
+                                    <a href="{{ url_for('mails') }}" class="btn btn-base btn-payment">
+                                        <i class="fas fa-paper-plane"></i> 发送第一封邮件
+                                    </a>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 快捷操作 -->
+        <div class="row mt-5">
+            <div class="col-12">
+                <div class="text-center py-4" style="background: var(--gradient-hero); border-radius: var(--radius-2xl);">
+                    <h5 class="text-white fw-bold mb-3">准备开始使用邮件服务？</h5>
+                    <div class="d-flex justify-content-center gap-3 flex-wrap">
+                        <a href="{{ url_for('mails') }}" class="btn btn-base btn-lg px-4"
+                           style="background: rgba(255,255,255,0.9); color: var(--primary-700); font-weight: 600;">
+                            <i class="fas fa-envelope-open-text"></i> 邮件管理
+                        </a>
+                        <a href="{{ url_for('compose') }}" class="btn btn-base btn-lg px-4"
+                           style="background: rgba(255,255,255,0.9); color: var(--success-700); font-weight: 600;">
+                            <i class="fas fa-paper-plane"></i> 发送邮件
+                        </a>
+                        <a href="{{ url_for('profile') }}" class="btn btn-base btn-lg px-4"
+                           style="background: rgba(255,255,255,0.9); color: var(--warning-700); font-weight: 600;">
+                            <i class="fas fa-user-cog"></i> 个人设置
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 现代化页脚 -->
+    <footer class="mt-5 py-4" style="background: rgba(255,255,255,0.1); backdrop-filter: blur(20px);">
+        <div class="container">
+            <div class="text-center">
+                <p class="text-white mb-2 fw-500">
+                    <i class="fas fa-wallet me-2"></i>
+                    智能充值系统
+                </p>
+                <p class="text-white opacity-75 small mb-0">
+                    安全支付 · 即时到账 · 透明计费
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- 充值页面增强脚本 -->
+    <script>
+        // 添加充值按钮点击效果
+        document.querySelectorAll('.btn-recharge, .btn-promotion').forEach(button => {
+            button.addEventListener('click', function(e) {
+                // 添加点击波纹效果
+                const ripple = document.createElement('span');
+                ripple.classList.add('position-absolute', 'rounded-circle');
+                ripple.style.background = 'rgba(255,255,255,0.6)';
+                ripple.style.transform = 'scale(0)';
+                ripple.style.animation = 'ripple 0.6s linear';
+                ripple.style.left = (e.clientX - e.target.offsetLeft) + 'px';
+                ripple.style.top = (e.clientY - e.target.offsetTop) + 'px';
+
+                this.appendChild(ripple);
+
+                setTimeout(() => {
+                    ripple.remove();
+                }, 600);
+            });
+        });
+
+        // 添加CSS动画
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes ripple {
+                to {
+                    transform: scale(4);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // 动态调整余额显示椭圆形宽度
+        function adjustBalanceBadgeWidth() {
+            const balanceBadge = document.getElementById('balance-badge');
+            if (balanceBadge) {
+                // 创建临时元素测量文字宽度
+                const tempSpan = document.createElement('span');
+                tempSpan.style.visibility = 'hidden';
+                tempSpan.style.position = 'absolute';
+                tempSpan.style.fontSize = window.getComputedStyle(balanceBadge).fontSize;
+                tempSpan.style.fontWeight = window.getComputedStyle(balanceBadge).fontWeight;
+                tempSpan.style.fontFamily = window.getComputedStyle(balanceBadge).fontFamily;
+                tempSpan.textContent = balanceBadge.textContent;
+
+                document.body.appendChild(tempSpan);
+                const textWidth = tempSpan.offsetWidth;
+                document.body.removeChild(tempSpan);
+
+                // 设置最小宽度和动态宽度
+                const minWidth = 80;
+                const padding = 32; // 左右padding总和
+                const dynamicWidth = Math.max(minWidth, textWidth + padding);
+
+                balanceBadge.style.minWidth = dynamicWidth + 'px';
+            }
+        }
+
+        // 页面加载完成后调整宽度
+        document.addEventListener('DOMContentLoaded', adjustBalanceBadgeWidth);
+
+        // 如果余额可能动态更新，也可以在更新后调用
+        window.adjustBalanceBadgeWidth = adjustBalanceBadgeWidth;
+
+        // VIP购买确认函数
+        function confirmVipPurchase() {
+            const userBalance = {{ user.balance }};
+            const vipCost = 10.0; // VIP费用
+
+            if (userBalance < vipCost) {
+                alert('余额不足，试试充值余额再来试试吧！\n\n当前余额：¥' + userBalance.toFixed(2) + '\n需要金额：¥' + vipCost.toFixed(2));
+                return false;
+            }
+
+            return confirm('确定要开通VIP会员吗？\n\n费用：¥' + vipCost.toFixed(2) + '\n有效期：30天\n特权：前50条邮件免费，超额¥0.20/条');
+        }
+
+        // 跳转到咸鱼充值
+        function goToXianyuRecharge(amount) {
+            // 获取对应金额的咸鱼链接
+            fetch(`/api/xianyu_link/${amount}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.link) {
+                        // 在新窗口打开咸鱼链接
+                        window.open(data.link, '_blank');
+
+                        // 显示提示信息
+                        showToast(`即将跳转到咸鱼购买 ¥${amount} 充值码`, 'info');
+                    } else {
+                        showToast('暂时无法获取购买链接，请稍后重试', 'error');
+                    }
+                })
+                .catch(error => {
+                    showToast('网络错误，请稍后重试', 'error');
+                });
+        }
+
+        // 兑换充值码
+        function redeemCode() {
+            const code = document.getElementById('rechargeCode').value.trim();
+            if (!code) {
+                showToast('请输入充值码', 'warning');
+                return;
+            }
+
+            fetch('/api/redeem_code', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    code: code
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(`充值成功！获得 ¥${data.amount} 余额`, 'success');
+                    document.getElementById('rechargeCode').value = '';
+
+                    // 更新页面余额显示
+                    setTimeout(() => {
+                        location.reload();
+                    }, 2000);
+                } else {
+                    showToast('兑换失败：' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showToast('网络错误，请稍后重试', 'error');
+            });
+        }
+
+        // 显示Toast消息
+        function showToast(message, type = 'info') {
+            const bgClass = type === 'success' ? 'bg-success' :
+                           type === 'error' ? 'bg-danger' :
+                           type === 'warning' ? 'bg-warning' : 'bg-info';
+
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center text-white ${bgClass} border-0 position-fixed`;
+            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999;';
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+
+            document.body.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

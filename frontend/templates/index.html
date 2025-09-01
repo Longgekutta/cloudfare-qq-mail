@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能邮箱服务平台 - 专业可靠的邮件解决方案</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- 统一色彩系统 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/color-system.css') }}">
+    <!-- 组件库 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+    <!-- 自定义CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- 现代化导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-modern">
+        <div class="container">
+            <a class="navbar-brand navbar-brand-modern" href="{{ url_for('index') }}">
+                <i class="fas fa-envelope-open-text"></i> 智能邮箱
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link nav-link-modern active" href="{{ url_for('index') }}"><i class="fas fa-home"></i> 首页</a>
+                    </li>
+                    {% if user %}
+                    <li class="nav-item">
+                        <a class="nav-link nav-link-modern" href="{{ url_for('mails') }}"><i class="fas fa-envelope-open-text"></i> 邮件管理</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link nav-link-modern" href="{{ url_for('recharge') }}"><i class="fas fa-wallet"></i> 余额充值</a>
+                    </li>
+                    {% endif %}
+                </ul>
+                <ul class="navbar-nav">
+                    {% if user %}
+                    <!-- 用户余额显示 -->
+                    <li class="nav-item me-3">
+                        <span class="badge badge-balance" id="balance-badge">
+                            <i class="fas fa-wallet"></i> ¥{{ "%.2f"|format(user.balance) }}
+                        </span>
+                    </li>
+                    {% if user.is_vip %}
+                    <li class="nav-item me-3">
+                        <span class="badge badge-vip">
+                            <i class="fas fa-crown"></i> VIP
+                        </span>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link nav-link-modern dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle"></i> {{ user.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{{ url_for('profile') }}"><i class="fas fa-user-cog"></i> 个人资料</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('recharge') }}"><i class="fas fa-credit-card"></i> 余额充值</a></li>
+                            {% if user.is_admin %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin_users') }}"><i class="fas fa-users-cog"></i> 用户管理</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin_domains') }}"><i class="fas fa-network-wired"></i> 域名管理</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin_codes') }}"><i class="fas fa-key"></i> 注册码管理</a></li>
+                            {% endif %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> 退出登录</a></li>
+                        </ul>
+                    </li>
+                    {% else %}
+                    <li class="nav-item me-2">
+                        <a class="btn btn-base btn-secondary-modern" href="{{ url_for('login') }}">
+                            <i class="fas fa-sign-in-alt"></i> 登录
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn btn-base btn-payment" href="{{ url_for('register') }}">
+                            <i class="fas fa-user-plus"></i> 注册
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 英雄区域 -->
+    <main class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="text-center py-5 px-4" style="background: white; border-radius: 12px; margin: 40px 0;">
+                    <div>
+                        <div class="mb-4">
+                            <i class="fas fa-envelope-open-text mb-3" style="font-size: 3rem; color: var(--primary-500);"></i>
+                        </div>
+                        <h1 class="display-4 fw-bold mb-4" style="color: var(--gray-800);">
+                            智能邮箱服务平台
+                        </h1>
+                        <p class="lead fs-5 text-muted mb-5" style="max-width: 600px; margin: 0 auto;">
+                            专业可靠的邮件解决方案，让您的邮件管理更加智能高效
+                        </p>
+
+                        {% if not user %}
+                        <div class="d-flex justify-content-center gap-4 flex-wrap mt-4">
+                            <a class="btn btn-base btn-payment" href="{{ url_for('login') }}" style="padding: 12px 32px;">
+                                <i class="fas fa-sign-in-alt"></i> 立即登录
+                            </a>
+                            <a class="btn btn-base btn-recharge" href="{{ url_for('register') }}" style="padding: 12px 32px;">
+                                <i class="fas fa-user-plus"></i> 免费注册
+                            </a>
+                        </div>
+                        {% else %}
+                        <div class="d-flex justify-content-center gap-4 flex-wrap mt-4">
+                            <a class="btn btn-base btn-payment" href="{{ url_for('mails') }}" style="padding: 12px 32px;">
+                                <i class="fas fa-envelope-open-text"></i> 邮件管理
+                            </a>
+                            <a class="btn btn-base btn-recharge" href="{{ url_for('recharge') }}" style="padding: 12px 32px;">
+                                <i class="fas fa-wallet"></i> 余额充值
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 服务特色 -->
+        <div class="row mt-5 g-4" style="margin-top: 80px !important;">
+            <div class="col-12 text-center mb-5">
+                <h2 class="fw-bold mb-3" style="color: var(--gray-800);">为什么选择我们？</h2>
+                <p class="text-muted fs-5">专业的邮件服务，让您的工作更高效</p>
+            </div>
+
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card-premium text-center h-100">
+                    <div class="card-body-premium" style="padding: 40px 24px;">
+                        <div class="mb-4">
+                            <div class="d-inline-flex align-items-center justify-content-center rounded-circle"
+                                 style="width: 64px; height: 64px; background: var(--primary-100); color: var(--primary-600);">
+                                <i class="fas fa-bolt fa-2x"></i>
+                            </div>
+                        </div>
+                        <h5 class="fw-bold mb-3" style="color: var(--gray-800);">智能高效</h5>
+                        <p class="text-muted" style="line-height: 1.6;">AI驱动的邮件处理，自动分类整理，让您的邮件管理更加智能高效</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card-premium text-center h-100">
+                    <div class="card-body-premium" style="padding: 40px 24px;">
+                        <div class="mb-4">
+                            <div class="d-inline-flex align-items-center justify-content-center rounded-circle"
+                                 style="width: 64px; height: 64px; background: var(--success-100); color: var(--success-600);">
+                                <i class="fas fa-shield-alt fa-2x"></i>
+                            </div>
+                        </div>
+                        <h5 class="fw-bold mb-3" style="color: var(--gray-800);">安全可靠</h5>
+                        <p class="text-muted" style="line-height: 1.6;">企业级安全防护，多重加密保障，确保您的邮件数据安全无忧</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4 col-md-6 mb-4 mx-auto">
+                <div class="card-premium text-center h-100">
+                    <div class="card-body-premium" style="padding: 40px 24px;">
+                        <div class="mb-4">
+                            <div class="d-inline-flex align-items-center justify-content-center rounded-circle"
+                                 style="width: 64px; height: 64px; background: var(--warning-100); color: var(--warning-600);">
+                                <i class="fas fa-wallet fa-2x"></i>
+                            </div>
+                        </div>
+                        <h5 class="fw-bold mb-3" style="color: var(--gray-800);">灵活计费</h5>
+                        <p class="text-muted" style="line-height: 1.6;">按需付费，余额充值，透明计费，让您的每一块钱都花得明明白白</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 功能特性 -->
+        <div class="row mt-5">
+            <div class="col-12">
+                <div class="card-premium">
+                    <div class="card-header-premium text-center">
+                        <h2 class="fw-bold mb-0">核心功能特性</h2>
+                        <p class="text-muted mt-2 mb-0">全方位的邮件管理解决方案</p>
+                    </div>
+                    <div class="card-body-premium">
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center p-3 rounded-3" style="background: var(--success-50);">
+                                    <div class="flex-shrink-0 me-3">
+                                        <i class="fas fa-envelope-open-text fa-2x" style="color: var(--success-600);"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold mb-1" style="color: var(--success-700);">智能邮件管理</h6>
+                                        <small class="text-muted">自动分类、智能过滤、批量操作</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center p-3 rounded-3" style="background: var(--primary-50);">
+                                    <div class="flex-shrink-0 me-3">
+                                        <i class="fas fa-paperclip fa-2x" style="color: var(--primary-600);"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold mb-1" style="color: var(--primary-700);">附件管理</h6>
+                                        <small class="text-muted">大文件上传、云端存储、快速下载</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center p-3 rounded-3" style="background: var(--warning-50);">
+                                    <div class="flex-shrink-0 me-3">
+                                        <i class="fas fa-users fa-2x" style="color: var(--warning-600);"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold mb-1" style="color: var(--warning-700);">多账户支持</h6>
+                                        <small class="text-muted">统一管理多个邮箱账户</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center p-3 rounded-3" style="background: var(--success-50);">
+                                    <div class="flex-shrink-0 me-3">
+                                        <i class="fas fa-globe fa-2x" style="color: var(--success-600);"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold mb-1" style="color: var(--success-700);">域名邮箱</h6>
+                                        <small class="text-muted">专业域名邮箱注册与管理</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CTA区域 -->
+        {% if not user %}
+        <div class="row mt-5">
+            <div class="col-12">
+                <div class="text-center py-5" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: var(--radius-2xl); box-shadow: 0 20px 40px rgba(102, 126, 234, 0.3);">
+                    <h3 class="fw-bold mb-3" style="color: #ffffff; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">准备开始您的智能邮件之旅？</h3>
+                    <p class="mb-4 fs-5" style="color: #ffffff; opacity: 0.9; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">立即注册，享受专业的邮件管理服务</p>
+                    <div class="d-flex justify-content-center gap-3">
+                        <a class="btn btn-base btn-lg px-5" href="{{ url_for('register') }}"
+                           style="background: rgba(255,255,255,0.9); color: var(--primary-700); font-weight: 600;">
+                            <i class="fas fa-rocket"></i> 免费开始
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </main>
+
+    <!-- 联系作者信息 -->
+    <div class="position-fixed bottom-0 end-0 m-4" style="z-index: 1000;">
+        <div class="card shadow-lg border-0" style="background: rgba(255,255,255,0.95); backdrop-filter: blur(20px); border-radius: 16px; max-width: 280px;">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="flex-shrink-0 me-2">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center"
+                             style="width: 32px; height: 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <i class="fas fa-user-tie text-white" style="font-size: 14px;"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <h6 class="mb-0 fw-bold" style="color: #2d3748; font-size: 14px;">联系作者</h6>
+                        <small class="text-muted" style="font-size: 11px;">技术支持与合作</small>
+                    </div>
+                </div>
+
+                <div class="contact-info">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="flex-shrink-0 me-2">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center"
+                                 style="width: 24px; height: 24px; background: #1877f2;">
+                                <i class="fab fa-qq text-white" style="font-size: 12px;"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <small class="text-muted d-block" style="font-size: 10px;">QQ</small>
+                            <span class="fw-medium" style="font-size: 13px; color: #2d3748;">2846117874</span>
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary border-0 p-1"
+                                onclick="copyToClipboard('2846117874', 'QQ号')"
+                                title="复制QQ号">
+                            <i class="fas fa-copy" style="font-size: 10px;"></i>
+                        </button>
+                    </div>
+
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 me-2">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center"
+                                 style="width: 24px; height: 24px; background: #07c160;">
+                                <i class="fab fa-weixin text-white" style="font-size: 12px;"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <small class="text-muted d-block" style="font-size: 10px;">微信</small>
+                            <span class="fw-medium" style="font-size: 13px; color: #2d3748;">Lucky_Gike</span>
+                        </div>
+                        <button class="btn btn-sm btn-outline-success border-0 p-1"
+                                onclick="copyToClipboard('Lucky_Gike', '微信号')"
+                                title="复制微信号">
+                            <i class="fas fa-copy" style="font-size: 10px;"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 现代化页脚 -->
+    <footer class="mt-5 py-4" style="background: rgba(255,255,255,0.1); backdrop-filter: blur(20px);">
+        <div class="container">
+            <div class="text-center">
+                <p class="text-white mb-2 fw-500">
+                    <i class="fas fa-envelope-open-text me-2"></i>
+                    智能邮箱服务平台
+                </p>
+                <p class="text-white opacity-75 small mb-0">
+                    &copy; 2025 All rights reserved. 专业 · 安全 · 高效
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- 自定义JS -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+
+    <script>
+        // 动态调整余额显示椭圆形宽度
+        function adjustBalanceBadgeWidth() {
+            const balanceBadge = document.getElementById('balance-badge');
+            if (balanceBadge) {
+                // 创建临时元素测量文字宽度
+                const tempSpan = document.createElement('span');
+                tempSpan.style.visibility = 'hidden';
+                tempSpan.style.position = 'absolute';
+                tempSpan.style.fontSize = window.getComputedStyle(balanceBadge).fontSize;
+                tempSpan.style.fontWeight = window.getComputedStyle(balanceBadge).fontWeight;
+                tempSpan.style.fontFamily = window.getComputedStyle(balanceBadge).fontFamily;
+                tempSpan.textContent = balanceBadge.textContent;
+
+                document.body.appendChild(tempSpan);
+                const textWidth = tempSpan.offsetWidth;
+                document.body.removeChild(tempSpan);
+
+                // 设置最小宽度和动态宽度
+                const minWidth = 80;
+                const padding = 32; // 左右padding总和
+                const dynamicWidth = Math.max(minWidth, textWidth + padding);
+
+                balanceBadge.style.minWidth = dynamicWidth + 'px';
+            }
+        }
+
+        // 页面加载完成后调整宽度
+        document.addEventListener('DOMContentLoaded', adjustBalanceBadgeWidth);
+
+        // 复制到剪贴板功能
+        function copyToClipboard(text, type) {
+            navigator.clipboard.writeText(text).then(function() {
+                // 创建成功提示
+                const toast = document.createElement('div');
+                toast.className = 'toast align-items-center text-white bg-success border-0 position-fixed';
+                toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999;';
+                toast.setAttribute('role', 'alert');
+                toast.innerHTML = `
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="fas fa-check me-2"></i>${type} 已复制到剪贴板
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                `;
+
+                document.body.appendChild(toast);
+                const bsToast = new bootstrap.Toast(toast);
+                bsToast.show();
+
+                // 3秒后自动移除
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                }, 3000);
+            }).catch(function(err) {
+                alert('复制失败：' + err);
+            });
+        }
+    </script>
+</body>
+</html>

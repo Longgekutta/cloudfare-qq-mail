@@ -1,0 +1,259 @@
+/*
+===========================================
+🎨 优化色彩系统 - 基于UI设计最佳实践
+===========================================
+遵循60-30-10设计原则和留白设计理念
+- 白色/中性色 (60%): 主要背景和留白空间
+- 蓝色 (20%): 功能性元素和信任建立
+- 绿色 (10%): 关键行动按钮
+- 黄色 (10%): 重要提示和强调
+*/
+
+:root {
+  /* ========== 中性色系统 (主要背景 - 60%) ========== */
+  --neutral-0: #ffffff;      /* 纯白背景 */
+  --neutral-25: #fefefe;     /* 微灰白色 */
+  --neutral-50: #fafafa;     /* 浅灰背景 */
+  --neutral-100: #f5f5f5;    /* 卡片背景 */
+  --neutral-200: #e5e5e5;    /* 边框颜色 */
+  --neutral-300: #d4d4d4;    /* 分割线 */
+  --neutral-400: #a3a3a3;    /* 辅助文字 */
+  --neutral-500: #737373;    /* 次要文字 */
+  --neutral-600: #525252;    /* 主要文字 */
+  --neutral-700: #404040;    /* 标题文字 */
+  --neutral-800: #262626;    /* 重要标题 */
+  --neutral-900: #171717;    /* 最深文字 */
+
+  /* ========== 主色调系统 (蓝色 - 20%) ========== */
+  --primary-50: #f0f9ff;
+  --primary-100: #e0f2fe;
+  --primary-200: #bae6fd;
+  --primary-300: #7dd3fc;
+  --primary-400: #38bdf8;
+  --primary-500: #0ea5e9;    /* 主蓝色 - 降低饱和度 */
+  --primary-600: #0284c7;
+  --primary-700: #0369a1;
+  --primary-800: #075985;
+  --primary-900: #0c4a6e;
+
+  /* ========== 成功色系统 (绿色 - 10%) ========== */
+  --success-50: #f0fdf4;
+  --success-100: #dcfce7;
+  --success-200: #bbf7d0;
+  --success-300: #86efac;
+  --success-400: #4ade80;
+  --success-500: #22c55e;    /* 主绿色 - 降低饱和度 */
+  --success-600: #16a34a;
+  --success-700: #15803d;
+  --success-800: #166534;
+  --success-900: #14532d;
+
+  /* ========== 警告色系统 (黄色 - 10%) ========== */
+  --warning-50: #fefce8;
+  --warning-100: #fef9c3;
+  --warning-200: #fef08a;
+  --warning-300: #fde047;
+  --warning-400: #facc15;
+  --warning-500: #eab308;    /* 主黄色 - 降低饱和度 */
+  --warning-600: #ca8a04;
+  --warning-700: #a16207;
+  --warning-800: #854d0e;
+  --warning-900: #713f12;
+
+  /* ========== 辅助色系统 ========== */
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+  --gray-800: #1f2937;
+  --gray-900: #111827;
+
+  /* ========== 语义化颜色 ========== */
+  --danger-500: #ef4444;
+  --danger-600: #dc2626;
+  --info-500: #06b6d4;
+  --info-600: #0891b2;
+
+  /* ========== 清爽渐变色系统 ========== */
+  --gradient-primary: linear-gradient(135deg, var(--primary-100) 0%, var(--primary-200) 100%);
+  --gradient-success: linear-gradient(135deg, var(--success-100) 0%, var(--success-200) 100%);
+  --gradient-warning: linear-gradient(135deg, var(--warning-100) 0%, var(--warning-200) 100%);
+  --gradient-hero: linear-gradient(135deg, var(--primary-50) 0%, var(--success-50) 50%, var(--warning-50) 100%);
+  --gradient-card: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.95) 100%);
+
+  /* ========== 阴影系统 ========== */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  --shadow-colored: 0 10px 25px -5px rgba(59, 130, 246, 0.3);
+  --shadow-success: 0 10px 25px -5px rgba(16, 185, 129, 0.3);
+  --shadow-warning: 0 10px 25px -5px rgba(245, 158, 11, 0.3);
+
+  /* ========== 边框半径 ========== */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-full: 9999px;
+
+  /* ========== 间距系统 ========== */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+}
+
+/* ========== 基础样式重置 ========== */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  line-height: 1.6;
+  color: var(--gray-800);
+  background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+  min-height: 100vh;
+}
+
+/* ========== 通用组件类 ========== */
+.btn-primary-modern {
+  background: var(--gradient-primary);
+  border: none;
+  border-radius: var(--radius-full);
+  padding: var(--space-3) var(--space-6);
+  font-weight: 600;
+  color: white;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-colored);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary-modern:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-xl);
+  color: white;
+}
+
+.btn-success-modern {
+  background: var(--gradient-success);
+  border: none;
+  border-radius: var(--radius-full);
+  padding: var(--space-3) var(--space-6);
+  font-weight: 600;
+  color: white;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-success);
+}
+
+.btn-success-modern:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-xl);
+  color: white;
+}
+
+.btn-warning-modern {
+  background: var(--gradient-warning);
+  border: none;
+  border-radius: var(--radius-full);
+  padding: var(--space-3) var(--space-6);
+  font-weight: 600;
+  color: white;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-warning);
+}
+
+.btn-warning-modern:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-xl);
+  color: white;
+}
+
+.card-modern {
+  background: var(--gradient-card);
+  backdrop-filter: blur(20px);
+  border-radius: var(--radius-2xl);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: var(--shadow-xl);
+  overflow: hidden;
+  position: relative;
+}
+
+.card-modern::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--gradient-hero);
+}
+
+/* ========== 特殊效果类 ========== */
+.shimmer-effect::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+  animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+  100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+}
+
+.pulse-success {
+  animation: pulseSuccess 2s infinite;
+}
+
+@keyframes pulseSuccess {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  50% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+}
+
+.float-animation {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(180deg); }
+}
+
+/* ========== 背景装饰 ========== */
+.bg-pattern::before {
+  content: '';
+  position: fixed;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+  background-size: 50px 50px;
+  animation: backgroundMove 20s linear infinite;
+  z-index: -1;
+}
+
+@keyframes backgroundMove {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(50px, 50px); }
+}

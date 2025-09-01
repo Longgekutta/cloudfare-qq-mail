@@ -1,0 +1,26 @@
+{
+  "id": "811",
+  "timestamp": "2025-08-23T16:57:20.873231",
+  "info": {
+    "from": "\"高升\" <2846117874@qq.com>",
+    "to": "\"3\" <3@shiep.edu.kg>",
+    "subject": "Screenshot_2025-08-21-14-40-18-245_com.android.browser",
+    "date": "Sat, 23 Aug 2025 16:56:28 +0800",
+    "message_id": "<tencent_25BE869A672075D2D5C3CDA42ACF4BE63208@qq.com>",
+    "content_type": "multipart/mixed",
+    "forwarded_to": "2846117874@qq.com",
+    "forwarded_from": "3@shiep.edu.kg 2846117874@qq.com"
+  },
+  "content": {
+    "text": "",
+    "html_path": "./received_emails\\20250823_165720_Screenshot_2025-08-21-14-40-18_811_display.html",
+    "attachments": [
+      {
+        "filename": "Screenshot_2025-08-21-14-40-18-245_com.android.browser.jpg",
+        "size": 1018023,
+        "content_type": "application/octet-stream"
+      }
+    ]
+  },
+  "processed_time": "2025-08-23T16:57:20.934587"
+}

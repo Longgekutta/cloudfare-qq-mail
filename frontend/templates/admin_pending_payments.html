@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>待确认支付管理 - {{ user.username }}</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- 自定义样式 -->
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    
+    <style>
+        .status-badge {
+            font-size: 0.8rem;
+        }
+        
+        .payment-method {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .method-alipay {
+            background: #1677ff;
+            color: white;
+        }
+        
+        .method-wechat {
+            background: #1aad19;
+            color: white;
+        }
+        
+        .screenshot-preview {
+            max-width: 60px;
+            max-height: 60px;
+            cursor: pointer;
+        }
+        
+        .action-buttons .btn {
+            padding: 4px 8px;
+            font-size: 0.8rem;
+        }
+        
+        .filter-tabs {
+            border-bottom: 1px solid #dee2e6;
+            margin-bottom: 1rem;
+        }
+        
+        .stats-cards {
+            margin-bottom: 2rem;
+        }
+        
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 1rem;
+            text-align: center;
+        }
+        
+        .stats-number {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        
+        .quick-actions {
+            margin-bottom: 1rem;
+        }
+        
+        .modal-screenshot {
+            max-width: 100%;
+            max-height: 400px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('mails') }}">
+                <i class="fas fa-envelope"></i> 邮件系统
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('admin_users') }}">用户管理</a>
+                <a class="nav-link" href="{{ url_for('admin_codes') }}">注册码</a>
+                <a class="nav-link active" href="{{ url_for('admin_pending_payments') }}">支付管理</a>
+                <span class="navbar-text me-3">
+                    欢迎，{{ user.username }}
+                    <span class="badge bg-warning">管理员</span>
+                </span>
+                <a class="nav-link" href="{{ url_for('logout') }}">
+                    <i class="fas fa-sign-out-alt"></i> 退出
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- 页面标题 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2><i class="fas fa-credit-card"></i> 待确认支付管理</h2>
+                <p class="text-muted">管理用户提交的支付确认请求</p>
+            </div>
+        </div>
+
+        <!-- 统计卡片 -->
+        <div class="row stats-cards">
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number">{{ total_count }}</div>
+                    <div>总订单</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number" id="waiting-count">-</div>
+                    <div>待处理</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number" id="confirmed-count">-</div>
+                    <div>已确认</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number" id="cancelled-count">-</div>
+                    <div>已取消</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 状态筛选 -->
+        <div class="row">
+            <div class="col-12">
+                <ul class="nav nav-tabs filter-tabs">
+                    <li class="nav-item">
+                        <a class="nav-link {{ 'active' if status_filter == 'waiting_manual' else '' }}" 
+                           href="{{ url_for('admin_pending_payments', status='waiting_manual') }}">
+                            <i class="fas fa-clock"></i> 待手动确认
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ 'active' if status_filter == 'waiting_auto' else '' }}" 
+                           href="{{ url_for('admin_pending_payments', status='waiting_auto') }}">
+                            <i class="fas fa-robot"></i> 等待自动确认
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ 'active' if status_filter == 'confirmed' else '' }}" 
+                           href="{{ url_for('admin_pending_payments', status='confirmed') }}">
+                            <i class="fas fa-check-circle"></i> 已确认
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ 'active' if status_filter == 'cancelled' else '' }}" 
+                           href="{{ url_for('admin_pending_payments', status='cancelled') }}">
+                            <i class="fas fa-times-circle"></i> 已取消
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 快速操作 -->
+        {% if status_filter == 'waiting_manual' and pending_payments %}
+        <div class="row quick-actions">
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <i class="fas fa-lightbulb"></i> 
+                    <strong>快速操作：</strong>
+                    <button class="btn btn-success btn-sm ms-2" onclick="confirmSelectedPayments()">
+                        <i class="fas fa-check"></i> 批量确认
+                    </button>
+                    <button class="btn btn-warning btn-sm ms-2" onclick="refreshPage()">
+                        <i class="fas fa-sync"></i> 刷新页面
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 支付订单列表 -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        {% if pending_payments %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        {% if status_filter == 'waiting_manual' %}
+                                        <th width="40">
+                                            <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                                        </th>
+                                        {% endif %}
+                                        <th>订单信息</th>
+                                        <th>用户</th>
+                                        <th>金额</th>
+                                        <th>支付方式</th>
+                                        <th>状态</th>
+                                        <th>时间</th>
+                                        <th>截图</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for payment in pending_payments %}
+                                    <tr>
+                                        {% if status_filter == 'waiting_manual' %}
+                                        <td>
+                                            <input type="checkbox" class="payment-checkbox" value="{{ payment.id }}">
+                                        </td>
+                                        {% endif %}
+                                        <td>
+                                            <div>
+                                                <strong>{{ payment.order_id }}</strong><br>
+                                                <small class="text-muted">
+                                                    {% if payment.payment_type == 'balance' %}
+                                                        <i class="fas fa-wallet"></i> 余额充值
+                                                    {% elif payment.payment_type == 'vip' %}
+                                                        <i class="fas fa-crown"></i> 会员购买
+                                                    {% endif %}
+                                                </small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <strong>{{ payment.username or '未知用户' }}</strong>
+                                        </td>
+                                        <td>
+                                            <span class="fw-bold text-success">¥{{ "%.2f"|format(payment.amount) }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="payment-method method-{{ payment.payment_method }}">
+                                                {% if payment.payment_method == 'alipay' %}
+                                                    <i class="fab fa-alipay"></i> 支付宝
+                                                {% elif payment.payment_method == 'wechat' %}
+                                                    <i class="fab fa-weixin"></i> 微信
+                                                {% endif %}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if payment.status == 'waiting_manual' %}
+                                                <span class="badge bg-warning status-badge">
+                                                    <i class="fas fa-clock"></i> 待确认
+                                                </span>
+                                            {% elif payment.status == 'waiting_auto' %}
+                                                <span class="badge bg-info status-badge">
+                                                    <i class="fas fa-robot"></i> 自动处理中
+                                                </span>
+                                            {% elif payment.status == 'confirmed' %}
+                                                <span class="badge bg-success status-badge">
+                                                    <i class="fas fa-check"></i> 已确认
+                                                </span>
+                                            {% elif payment.status == 'cancelled' %}
+                                                <span class="badge bg-danger status-badge">
+                                                    <i class="fas fa-times"></i> 已取消
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div>{{ payment.created_at.strftime('%m-%d %H:%M') }}</div>
+                                            {% if payment.confirmed_at %}
+                                                <small class="text-muted">
+                                                    确认：{{ payment.confirmed_at.strftime('%m-%d %H:%M') }}
+                                                </small>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if payment.screenshot_filename %}
+                                                <img src="/payment_screenshots/{{ payment.screenshot_filename }}" 
+                                                     class="screenshot-preview img-thumbnail"
+                                                     onclick="showScreenshot('{{ payment.screenshot_filename }}', '{{ payment.order_id }}')">
+                                            {% else %}
+                                                <span class="text-muted">无截图</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="action-buttons">
+                                                {% if payment.status in ['waiting_manual', 'waiting_auto'] %}
+                                                    <button class="btn btn-success btn-sm me-1" 
+                                                            onclick="confirmPayment({{ payment.id }}, '{{ payment.order_id }}')">
+                                                        <i class="fas fa-check"></i> 确认
+                                                    </button>
+                                                    <button class="btn btn-danger btn-sm" 
+                                                            onclick="cancelPayment({{ payment.id }}, '{{ payment.order_id }}')">
+                                                        <i class="fas fa-times"></i> 取消
+                                                    </button>
+                                                {% else %}
+                                                    <span class="text-muted">已处理</span>
+                                                    {% if payment.admin_note %}
+                                                        <i class="fas fa-comment-alt" 
+                                                           data-bs-toggle="tooltip" 
+                                                           title="{{ payment.admin_note }}"></i>
+                                                    {% endif %}
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 分页 -->
+                        {% if total_pages > 1 %}
+                        <nav aria-label="支付订单分页">
+                            <ul class="pagination justify-content-center">
+                                {% if has_prev %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('admin_pending_payments', status=status_filter, page=prev_page) }}">
+                                            上一页
+                                        </a>
+                                    </li>
+                                {% endif %}
+                                
+                                {% for p in range(1, total_pages + 1) %}
+                                    {% if p == page %}
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ p }}</span>
+                                        </li>
+                                    {% elif p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="{{ url_for('admin_pending_payments', status=status_filter, page=p) }}">{{ p }}</a>
+                                        </li>
+                                    {% elif p == page - 3 or p == page + 3 %}
+                                        <li class="page-item disabled">
+                                            <span class="page-link">...</span>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('admin_pending_payments', status=status_filter, page=next_page) }}">
+                                            下一页
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+
+                        {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">暂无{{ 
+                                '待手动确认' if status_filter == 'waiting_manual' else
+                                '等待自动确认' if status_filter == 'waiting_auto' else
+                                '已确认' if status_filter == 'confirmed' else '已取消'
+                            }}的支付订单</h5>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 截图查看模态框 -->
+    <div class="modal fade" id="screenshotModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">支付截图</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <img id="modalScreenshot" class="modal-screenshot" src="" alt="支付截图">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 确认/取消操作模态框 -->
+    <div class="modal fade" id="actionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="actionModalTitle">确认操作</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="actionModalMessage"></p>
+                    <div class="mb-3">
+                        <label class="form-label">管理员备注（可选）:</label>
+                        <textarea class="form-control" id="adminNote" rows="3" 
+                                  placeholder="添加备注信息..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn" id="confirmActionBtn">确认</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        let currentPaymentId = null;
+        let currentAction = null;
+
+        // 显示截图
+        function showScreenshot(filename, orderId) {
+            document.getElementById('modalScreenshot').src = '/payment_screenshots/' + filename;
+            document.querySelector('#screenshotModal .modal-title').textContent = '支付截图 - ' + orderId;
+            new bootstrap.Modal(document.getElementById('screenshotModal')).show();
+        }
+
+        // 确认支付
+        function confirmPayment(paymentId, orderId) {
+            currentPaymentId = paymentId;
+            currentAction = 'confirm';
+            
+            document.getElementById('actionModalTitle').textContent = '确认支付';
+            document.getElementById('actionModalMessage').textContent = `确认支付订单：${orderId}？`;
+            document.getElementById('confirmActionBtn').textContent = '确认支付';
+            document.getElementById('confirmActionBtn').className = 'btn btn-success';
+            document.getElementById('adminNote').value = '';
+            
+            new bootstrap.Modal(document.getElementById('actionModal')).show();
+        }
+
+        // 取消支付
+        function cancelPayment(paymentId, orderId) {
+            currentPaymentId = paymentId;
+            currentAction = 'cancel';
+            
+            document.getElementById('actionModalTitle').textContent = '取消支付';
+            document.getElementById('actionModalMessage').textContent = `取消支付订单：${orderId}？`;
+            document.getElementById('confirmActionBtn').textContent = '确认取消';
+            document.getElementById('confirmActionBtn').className = 'btn btn-danger';
+            document.getElementById('adminNote').value = '';
+            
+            new bootstrap.Modal(document.getElementById('actionModal')).show();
+        }
+
+        // 执行操作
+        document.getElementById('confirmActionBtn').addEventListener('click', function() {
+            const adminNote = document.getElementById('adminNote').value;
+            const url = currentAction === 'confirm' 
+                ? `/admin/confirm_payment/${currentPaymentId}`
+                : `/admin/cancel_payment/${currentPaymentId}`;
+            
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ admin_note: adminNote })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('操作成功！');
+                    location.reload();
+                } else {
+                    alert('操作失败：' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('操作失败：' + error.message);
+            });
+            
+            bootstrap.Modal.getInstance(document.getElementById('actionModal')).hide();
+        });
+
+        // 全选功能
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAll');
+            const checkboxes = document.querySelectorAll('.payment-checkbox');
+            
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = selectAll.checked;
+            });
+        }
+
+        // 批量确认
+        function confirmSelectedPayments() {
+            const checkboxes = document.querySelectorAll('.payment-checkbox:checked');
+            
+            if (checkboxes.length === 0) {
+                alert('请选择要确认的支付订单');
+                return;
+            }
+            
+            if (confirm(`确认批量处理 ${checkboxes.length} 个支付订单？`)) {
+                const promises = Array.from(checkboxes).map(checkbox => {
+                    return fetch(`/admin/confirm_payment/${checkbox.value}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ admin_note: '批量确认' })
+                    });
+                });
+                
+                Promise.all(promises).then(() => {
+                    alert('批量确认完成！');
+                    location.reload();
+                });
+            }
+        }
+
+        // 刷新页面
+        function refreshPage() {
+            location.reload();
+        }
+
+        // 启用tooltip
+        document.addEventListener('DOMContentLoaded', function() {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        });
+    </script>
+</body>
+</html>
