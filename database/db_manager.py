@@ -12,7 +12,13 @@ import sys
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from email_config import DB_HOST, DB_USER, DB_PASSWORD, DB_NAME
+import os
+
+# 从环境变量或email_config获取数据库配置
+DB_HOST = os.environ.get('DB_HOST', 'localhost')
+DB_USER = os.environ.get('DB_USER', 'root')
+DB_PASSWORD = os.environ.get('DB_PASSWORD', '518107qW')
+DB_NAME = os.environ.get('DB_NAME', 'cloudfare_qq_mail')
 
 class DatabaseManager:
     """数据库管理类"""
@@ -124,13 +130,6 @@ class DatabaseManager:
         result = self.execute_query(query, params)
         return result[0] if result else None
 
-    def get_user_by_id(self, user_id):
-        """根据用户ID获取用户信息"""
-        query = "SELECT * FROM users WHERE id = %s"
-        params = (user_id,)
-        result = self.execute_query(query, params)
-        return result[0] if result else None
-    
     def get_user_by_id(self, user_id):
         """根据用户ID获取用户信息"""
         query = "SELECT * FROM users WHERE id = %s"
@@ -709,11 +708,17 @@ class DatabaseManager:
         result = self.execute_query(query, params)
         return result[0] if result else None
 
-    def update_user_password(self, user_id, new_password_hash):
+    def update_user_password(self, user_id, new_password_hash, plain_password=None):
         """更新用户密码"""
         query = "UPDATE users SET password = %s WHERE id = %s"
         params = (new_password_hash, user_id)
-        return self.execute_update(query, params)
+        result = self.execute_update(query, params)
+
+        # 如果提供了明文密码，保存到历史记录
+        if plain_password and result >= 0:
+            self.save_password_history(user_id, plain_password, new_password_hash)
+
+        return result
 
     def update_user_vip_status(self, user_id, is_vip, expire_date=None, reset_count=True):
         """更新用户VIP状态"""
