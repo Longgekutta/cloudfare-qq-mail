@@ -127,10 +127,10 @@ CREATE TABLE IF NOT EXISTS verification_code_logs (
 ) COMMENT = '验证码发送记录表：记录用户验证码发送历史，用于限制发送频率';
 
 -- 插入默认管理员账户
--- 密码: 518107qW (已哈希)
-INSERT IGNORE INTO users (username, password, email, is_admin, balance) VALUES
-('admin', '$2b$12$sJya6Zec7XpHPj3l6qaNrOFjeVcGCVUoQ5N787ojYcWVDEvXGpmmi', 'admin@system.local', 1, 100.00),
-('longgekutta', '$2b$12$nx1ltMhnDvAcatN0uib/l.oC2ioEctS/oDYbN5bDKOfN0VP3uJlw.', 'longgekutta@system.local', 1, 100.00);
+-- 密码: 518107qW (使用正确的bcrypt哈希)
+INSERT IGNORE INTO users (username, password, email, is_admin, is_vip, balance) VALUES
+('admin', '$2b$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin@shiep.edu.kg', 1, 1, 100.00),
+('longgekutta', '$2b$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'longgekutta@shiep.edu.kg', 1, 1, 100.00);
 
 -- 插入默认域名
 INSERT IGNORE INTO domains (domain_name) VALUES
@@ -139,8 +139,8 @@ INSERT IGNORE INTO domains (domain_name) VALUES
 
 -- 插入管理员密码历史记录
 INSERT IGNORE INTO user_password_history (user_id, plain_password, hashed_password) VALUES
-(1, '518107qW', '$2b$12$sJya6Zec7XpHPj3l6qaNrOFjeVcGCVUoQ5N787ojYcWVDEvXGpmmi'),
-(2, '518107qW', '$2b$12$nx1ltMhnDvAcatN0uib/l.oC2ioEctS/oDYbN5bDKOfN0VP3uJlw.');
+(1, '518107qW', '$2b$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi'),
+(2, '518107qW', '$2b$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi');
 
 -- 创建索引以提高查询性能
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
