@@ -19,13 +19,16 @@ WORKDIR /app
 # 创建非root用户
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 
-# 最简化的系统依赖安装（避免复杂的镜像源问题）
+# 完整系统依赖安装（确保功能完整）
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         gcc \
         default-libmysqlclient-dev \
         pkg-config \
         curl \
+        default-mysql-client \
+        wget \
+        unzip \
         && rm -rf /var/lib/apt/lists/* \
         && apt-get clean
 
@@ -38,14 +41,16 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# 复制应用文件
+# 复制应用文件（确保所有文件都被复制）
 COPY app.py config.py ./
 COPY *.py ./
 COPY database/ ./database/
 COPY frontend/ ./frontend/
+COPY nginx/ ./nginx/
 
-# 复制配置文件
+# 复制所有脚本和配置文件
 COPY *.sh ./
+COPY *.bat ./
 COPY docker-compose*.yml ./
 COPY .env.production ./.env
 
@@ -55,11 +60,21 @@ RUN mkdir -p /app/uploads /app/temp_attachments /app/received_emails /app/sent_a
     chmod +x /app/docker-init.sh && \
     chmod +x /app/*.sh 2>/dev/null || true
 
-# 验证安装
-RUN echo "=== 简化版验证 ===" && \
-    python --version && \
-    pip --version && \
-    echo "✅ 简化版构建完成"
+# 完整验证关键文件存在并显示详细信息（确保功能完整）
+RUN echo "=== 验证应用文件 ===" && \
+    ls -la /app/ && \
+    echo "=== 验证数据库文件 ===" && \
+    ls -la /app/database/ && \
+    echo "=== 验证关键文件 ===" && \
+    test -f /app/app.py && echo "✅ app.py 存在" && \
+    test -f /app/config.py && echo "✅ config.py 存在" && \
+    test -f /app/database/init.sql && echo "✅ init.sql 存在" && \
+    test -f /app/docker-init.sh && echo "✅ docker-init.sh 存在" && \
+    test -f /app/.env && echo "✅ .env 存在" && \
+    echo "🎉 所有关键文件验证完成"
+
+# 创建环境文件的备份
+RUN cp /app/.env /app/.env.backup || echo "环境文件备份创建"
 
 # 设置文件所有权
 RUN chown -R appuser:appuser /app
@@ -70,9 +85,9 @@ EXPOSE 5000
 # 切换用户
 USER appuser
 
-# 健康检查
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+# 健康检查（与原版保持一致）
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \
     CMD curl -f http://localhost:5000/ || exit 1
 
-# 启动应用
-CMD ["bash", "/app/docker-init.sh"]
+# 启动应用（与原版保持一致）
+CMD ["/app/docker-init.sh"]
