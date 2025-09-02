@@ -199,6 +199,54 @@ install_docker_smart() {
     fi
 }
 
+# ZIP文件解压函数
+extract_zip() {
+    local zip_file="$1"
+    
+    if ! command -v unzip &> /dev/null; then
+        log WARNING "unzip未安装，尝试安装..."
+        if command -v apt-get &> /dev/null; then
+            apt-get update && apt-get install -y unzip
+        elif command -v yum &> /dev/null; then
+            yum install -y unzip
+        else
+            log ERROR "无法自动安装unzip，请手动安装后重试"
+            return 1
+        fi
+    fi
+    
+    log INFO "解压ZIP文件: $zip_file"
+    
+    if unzip -q "$zip_file"; then
+        # 查找解压后的目录（可能有不同的命名方式）
+        local extracted_dir=""
+        for dir in cloudfare-qq-mail-* cloudfare-qq-mail; do
+            if [[ -d "$dir" ]]; then
+                extracted_dir="$dir"
+                break
+            fi
+        done
+        
+        if [[ -n "$extracted_dir" ]]; then
+            # 重命名为标准目录名
+            if [[ "$extracted_dir" != "$PROJECT_NAME" ]]; then
+                mv "$extracted_dir" "$PROJECT_NAME"
+            fi
+            
+            cd "$PROJECT_NAME"
+            log SUCCESS "ZIP文件解压成功"
+            rm -f "../$zip_file"  # 清理ZIP文件
+            return 0
+        else
+            log ERROR "解压后找不到项目目录"
+            return 1
+        fi
+    else
+        log ERROR "ZIP文件解压失败"
+        return 1
+    fi
+}
+
 # 获取项目代码
 get_project_code() {
     log STEP "获取项目代码..."
@@ -209,23 +257,118 @@ get_project_code() {
         return 0
     fi
     
+    # 检查Git是否安装
+    if ! command -v git &> /dev/null; then
+        log WARNING "Git未安装，正在自动安装..."
+        
+        if command -v apt-get &> /dev/null; then
+            apt-get update && apt-get install -y git
+        elif command -v yum &> /dev/null; then
+            yum install -y git
+        elif command -v dnf &> /dev/null; then
+            dnf install -y git
+        else
+            error_exit "无法自动安装Git，请手动安装: apt-get install git 或 yum install git"
+        fi
+        
+        if ! command -v git &> /dev/null; then
+            error_exit "Git安装失败，请手动安装Git后重试"
+        fi
+        
+        log SUCCESS "Git安装成功"
+    fi
+    
     # 尝试从多个源获取代码 (优先使用Gitee，速度更快)
     local repos=("$GITEE_REPO" "$GITHUB_REPO")
     local target_dir="${PROJECT_NAME}"
     
+    # 清理可能存在的旧目录
+    if [[ -d "$target_dir" ]]; then
+        log INFO "清理旧的项目目录..."
+        rm -rf "$target_dir"
+    fi
+    
     for repo in "${repos[@]}"; do
         log INFO "尝试克隆: $repo"
         
-        if git clone "$repo" "$target_dir" 2>/dev/null; then
+        # 显示详细的git错误信息
+        if git clone "$repo" "$target_dir"; then
             cd "$target_dir"
             log SUCCESS "代码获取成功: $repo"
             return 0
         else
-            log WARNING "克隆失败: $repo"
+            local git_error=$?
+            log WARNING "克隆失败: $repo (错误代码: $git_error)"
+            
+            # 提供更详细的错误诊断
+            case $git_error in
+                128)
+                    log WARNING "可能原因: 仓库不存在或网络问题"
+                    ;;
+                1|2)
+                    log WARNING "可能原因: 网络连接超时或DNS解析失败"
+                    ;;
+                *)
+                    log WARNING "Git错误代码: $git_error，请检查网络连接"
+                    ;;
+            esac
         fi
     done
     
-    error_exit "无法获取项目代码，请检查网络连接或手动下载"
+    # 如果Git克隆都失败，尝试自动下载ZIP文件
+    log WARNING "Git克隆失败，尝试下载ZIP文件..."
+    
+    local zip_urls=(
+        "https://gitee.com/longgekutta/cloudfare-qq-mail/repository/archive/main.zip"
+        "https://github.com/Longgekutta/cloudfare-qq-mail/archive/main.zip"
+    )
+    
+    for zip_url in "${zip_urls[@]}"; do
+        log INFO "尝试下载: $zip_url"
+        
+        local zip_file="cloudfare-qq-mail-main.zip"
+        
+        # 尝试使用wget或curl下载
+        if command -v wget &> /dev/null; then
+            if wget -O "$zip_file" "$zip_url" --timeout=30 --tries=2; then
+                log SUCCESS "ZIP文件下载成功"
+                if extract_zip "$zip_file"; then
+                    return 0
+                fi
+            else
+                log WARNING "wget下载失败: $zip_url"
+            fi
+        elif command -v curl &> /dev/null; then
+            if curl -L --connect-timeout 30 --max-time 60 -o "$zip_file" "$zip_url"; then
+                log SUCCESS "ZIP文件下载成功"
+                if extract_zip "$zip_file"; then
+                    return 0
+                fi
+            else
+                log WARNING "curl下载失败: $zip_url"
+            fi
+        fi
+        
+        # 清理失败的下载文件
+        rm -f "$zip_file"
+    done
+    
+    # 所有方法都失败，提供手动解决方案
+    log ERROR "所有自动获取代码的方法都失败了"
+    log INFO "请尝试以下手动解决方案："
+    echo ""
+    echo "1. 检查网络连接:"
+    echo "   ping -c 3 gitee.com"
+    echo "   ping -c 3 github.com"
+    echo ""
+    echo "2. 手动下载并解压:"
+    echo "   wget https://gitee.com/longgekutta/cloudfare-qq-mail/repository/archive/main.zip"
+    echo "   unzip main.zip && mv cloudfare-qq-mail-* cloudfare-qq-mail && cd cloudfare-qq-mail"
+    echo ""
+    echo "3. 然后运行本地部署:"
+    echo "   docker-compose up -d --build"
+    
+    error_exit "无法自动获取项目代码，请参考上述手动方案"
 }
 
 # 创建完整配置
