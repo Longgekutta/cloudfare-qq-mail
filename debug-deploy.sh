@@ -4,12 +4,16 @@
 echo "🔍 调试部署问题 - 详细诊断"
 echo "=================================="
 
-# 进入项目目录
-if [[ -d "cloudfare-qq-mail" ]]; then
+# 检查是否在项目目录中
+if [[ -f "app.py" && -f "docker-compose.yml" ]] || [[ -f "app.py" && -f "docker-compose.tencent.yml" ]]; then
+    echo "✅ 已在项目目录中: $(pwd)"
+elif [[ -d "cloudfare-qq-mail" ]]; then
     cd cloudfare-qq-mail
-    echo "✅ 已进入项目目录: $(pwd)"
+    echo "✅ 进入项目目录: $(pwd)"
 else
-    echo "❌ 项目目录不存在"
+    echo "❌ 未找到项目文件，请确保在正确的目录中"
+    echo "当前目录: $(pwd)"
+    echo "目录内容: $(ls -la)"
     exit 1
 fi
 
