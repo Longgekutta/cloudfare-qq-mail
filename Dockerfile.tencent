@@ -1,0 +1,136 @@
+# 腾讯云专用优化版 - 最快构建速度
+FROM python:3.9-slim
+
+# 设置标签信息
+LABEL maintainer="cloudfare-qq-mail"
+LABEL version="1.0.0-tencent"
+LABEL description="Cloudfare QQ Mail Service - Tencent Cloud Optimized"
+
+# 设置环境变量
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV DEBIAN_FRONTEND=noninteractive
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+
+# 腾讯云专用镜像源配置（内网高速）
+RUN rm -rf /etc/apt/sources.list* && \
+    mkdir -p /etc/apt/sources.list.d && \
+    echo "# 腾讯云内网镜像源 - 最高速度" > /etc/apt/sources.list && \
+    echo "deb http://mirrors.tencentyun.com/debian/ bookworm main contrib non-free non-free-firmware" >> /etc/apt/sources.list && \
+    echo "deb http://mirrors.tencentyun.com/debian/ bookworm-updates main contrib non-free non-free-firmware" >> /etc/apt/sources.list && \
+    echo "deb http://mirrors.tencentyun.com/debian-security/ bookworm-security main contrib non-free non-free-firmware" >> /etc/apt/sources.list && \
+    echo "" >> /etc/apt/sources.list && \
+    echo "# 备用源1 - 腾讯云公网镜像" >> /etc/apt/sources.list && \
+    echo "deb https://mirrors.cloud.tencent.com/debian/ bookworm main contrib non-free non-free-firmware" >> /etc/apt/sources.list && \
+    echo "deb https://mirrors.cloud.tencent.com/debian/ bookworm-updates main contrib non-free non-free-firmware" >> /etc/apt/sources.list && \
+    echo "deb https://mirrors.cloud.tencent.com/debian-security/ bookworm-security main contrib non-free non-free-firmware" >> /etc/apt/sources.list && \
+    echo "" >> /etc/apt/sources.list && \
+    echo "# 备用源2 - 阿里云" >> /etc/apt/sources.list && \
+    echo "deb https://mirrors.aliyun.com/debian/ bookworm main contrib non-free non-free-firmware" >> /etc/apt/sources.list && \
+    echo "deb https://mirrors.aliyun.com/debian/ bookworm-updates main contrib non-free non-free-firmware" >> /etc/apt/sources.list && \
+    echo "deb https://mirrors.aliyun.com/debian-security/ bookworm-security main contrib non-free non-free-firmware" >> /etc/apt/sources.list
+
+# 腾讯云网络优化配置
+RUN echo "# 腾讯云专用APT配置" > /etc/apt/apt.conf.d/99tencent && \
+    echo "Acquire::http::Timeout \"8\";" >> /etc/apt/apt.conf.d/99tencent && \
+    echo "Acquire::https::Timeout \"8\";" >> /etc/apt/apt.conf.d/99tencent && \
+    echo "Acquire::Retries \"2\";" >> /etc/apt/apt.conf.d/99tencent && \
+    echo "APT::Get::Assume-Yes \"true\";" >> /etc/apt/apt.conf.d/99tencent && \
+    echo "APT::Install-Recommends \"false\";" >> /etc/apt/apt.conf.d/99tencent && \
+    echo "APT::Install-Suggests \"false\";" >> /etc/apt/apt.conf.d/99tencent && \
+    echo "Acquire::ForceIPv4 \"true\";" >> /etc/apt/apt.conf.d/99tencent && \
+    echo "# 优先使用腾讯云内网" >> /etc/apt/apt.conf.d/99tencent
+
+# 彻底阻止官方源访问（避免回退）
+RUN echo "# 阻止官方Debian源回退" >> /etc/hosts && \
+    echo "127.0.0.1 deb.debian.org" >> /etc/hosts && \
+    echo "127.0.0.1 security.debian.org" >> /etc/hosts && \
+    echo "127.0.0.1 archive.debian.org" >> /etc/hosts && \
+    echo "127.0.0.1 httpredir.debian.org" >> /etc/hosts && \
+    echo "127.0.0.1 ftp.debian.org" >> /etc/hosts
+
+# 设置工作目录
+WORKDIR /app
+
+# 创建非root用户
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+# 腾讯云高速安装系统依赖
+RUN echo "🚀 腾讯云高速安装开始..." && \
+    apt-get clean && \
+    apt-get update --fix-missing && \
+    apt-get install -y --no-install-recommends --fix-missing \
+        gcc \
+        default-libmysqlclient-dev \
+        pkg-config \
+        curl \
+        default-mysql-client \
+        wget \
+        unzip \
+        ca-certificates \
+        build-essential \
+        python3-dev && \
+    rm -rf /var/lib/apt/lists/* && \
+    apt-get clean && \
+    echo "✅ 系统依赖安装完成"
+
+# 腾讯云PyPI镜像源配置（腾讯云内网最快）
+RUN pip config set global.index-url https://mirrors.cloud.tencent.com/pypi/simple/ && \
+    pip config set global.trusted-host mirrors.cloud.tencent.com && \
+    pip config set global.extra-index-url "https://pypi.tuna.tsinghua.edu.cn/simple/ https://mirrors.aliyun.com/pypi/simple/" && \
+    pip config set global.timeout 20
+
+# 复制依赖文件
+COPY requirements.txt .
+
+# 腾讯云高速安装Python依赖
+RUN echo "🚀 腾讯云高速Python包安装..." && \
+    pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt && \
+    echo "✅ Python依赖安装完成"
+
+# 复制应用文件（分层优化）
+COPY app.py config.py ./
+COPY *.py ./
+COPY database/ ./database/
+COPY frontend/ ./frontend/
+COPY nginx/ ./nginx/
+
+# 复制脚本和配置
+COPY *.sh ./
+COPY *.bat ./
+COPY docker-compose*.yml ./
+COPY .env.production ./.env
+
+# 创建目录和设置权限
+RUN mkdir -p /app/uploads /app/temp_attachments /app/received_emails /app/sent_attachments /app/logs /app/database/backup && \
+    chmod 755 /app/uploads /app/temp_attachments /app/received_emails /app/sent_attachments /app/logs /app/database/backup && \
+    chmod +x /app/docker-init.sh && \
+    chmod +x /app/*.sh 2>/dev/null || true
+
+# 腾讯云部署验证
+RUN echo "=== 腾讯云部署验证 ===" && \
+    python --version && \
+    pip --version && \
+    mysql --version && \
+    curl --version && \
+    echo "✅ 验证通过" && \
+    ls -la /app/ && \
+    echo "🎉 腾讯云专用版构建完成 - 预计构建时间 1-3 分钟"
+
+# 设置文件所有权
+RUN chown -R appuser:appuser /app
+
+# 暴露端口
+EXPOSE 5000
+
+# 切换用户
+USER appuser
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:5000/ || exit 1
+
+# 启动应用
+CMD ["bash", "/app/docker-init.sh"]

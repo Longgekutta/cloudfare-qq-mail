@@ -471,11 +471,22 @@ choose_deployment_method() {
     log DEBUG "USE_PREBUILT_IMAGE: $USE_PREBUILT_IMAGE"
     log DEBUG "当前DEPLOY_MODE: ${DEPLOY_MODE:-未设置}"
     
-    # 检测网络环境并选择最佳构建方式
+    # 检测云环境和网络环境并选择最佳构建方式
+    local cloud_provider=""
     local is_china_network=false
-    if curl -s --connect-timeout 3 https://mirrors.tuna.tsinghua.edu.cn &>/dev/null; then
+    
+    # 检测腾讯云环境
+    if curl -s --connect-timeout 2 http://metadata.tencentyun.com &>/dev/null; then
+        cloud_provider="tencent"
         is_china_network=true
-        log INFO "检测到国内网络环境，将使用国内镜像优化"
+        log INFO "🚀 检测到腾讯云环境，将使用腾讯云专用优化版本（最高速度）"
+    elif curl -s --connect-timeout 2 http://100.100.100.200 &>/dev/null; then
+        cloud_provider="aliyun"
+        is_china_network=true
+        log INFO "🚀 检测到阿里云环境，将使用阿里云镜像优化"
+    elif curl -s --connect-timeout 3 https://mirrors.tuna.tsinghua.edu.cn &>/dev/null; then
+        is_china_network=true
+        log INFO "🚀 检测到国内网络环境，将使用国内镜像优化"
     fi
     
     # 自动检测最佳部署方式
@@ -483,9 +494,15 @@ choose_deployment_method() {
         DEPLOY_MODE="image"
         log INFO "使用预构建镜像部署模式"
     elif [[ -f "Dockerfile" && -f "docker-compose.yml" ]]; then
-        if [[ "$is_china_network" == "true" && -f "Dockerfile.china" && -f "docker-compose.china.yml" ]]; then
+        if [[ "$cloud_provider" == "tencent" && -f "Dockerfile.tencent" && -f "docker-compose.tencent.yml" ]]; then
+            DEPLOY_MODE="build-tencent"
+            log INFO "🚀 使用腾讯云专用优化版本（内网高速，预计1-3分钟完成）"
+        elif [[ "$cloud_provider" == "aliyun" && -f "Dockerfile.china" && -f "docker-compose.china.yml" ]]; then
             DEPLOY_MODE="build-china"
-            log INFO "使用国内优化版本构建部署（速度更快）"
+            log INFO "🚀 使用阿里云优化版本构建部署（速度更快）"
+        elif [[ "$is_china_network" == "true" && -f "Dockerfile.china" && -f "docker-compose.china.yml" ]]; then
+            DEPLOY_MODE="build-china"
+            log INFO "🚀 使用国内优化版本构建部署（速度更快）"
         else
             DEPLOY_MODE="build"
             log INFO "使用本地构建部署模式"
@@ -592,6 +609,21 @@ deploy_with_build() {
     log SUCCESS "本地构建部署完成"
 }
 
+# 腾讯云专用构建部署
+deploy_with_build_tencent() {
+    log STEP "🚀 使用腾讯云专用版本构建部署..."
+    
+    # 清理旧资源
+    log INFO "清理旧容器和镜像..."
+    docker-compose -f docker-compose.tencent.yml down --remove-orphans 2>/dev/null || true
+    
+    # 使用腾讯云专用版本构建并启动
+    log INFO "🚀 使用腾讯云内网镜像源构建（最高速度，预计1-3分钟）..."
+    docker-compose -f docker-compose.tencent.yml up -d --build --force-recreate
+    
+    log SUCCESS "🎉 腾讯云专用构建部署完成"
+}
+
 # 国内优化构建部署
 deploy_with_build_china() {
     log STEP "使用国内优化版本构建部署..."
@@ -617,6 +649,9 @@ smart_deploy() {
             ;;
         "build")
             deploy_with_build
+            ;;
+        "build-tencent")
+            deploy_with_build_tencent
             ;;
         "build-china")
             deploy_with_build_china
@@ -644,8 +679,15 @@ wait_for_services() {
     local elapsed=0
     
     while [[ $elapsed -lt $max_wait ]]; do
-        # 检查容器状态
-        if docker-compose ps --services --filter "status=running" | wc -l | grep -q "2"; then
+        # 检查容器状态（支持不同的compose文件）
+        local compose_file="docker-compose.yml"
+        if [[ "$DEPLOY_MODE" == "build-tencent" ]]; then
+            compose_file="docker-compose.tencent.yml"
+        elif [[ "$DEPLOY_MODE" == "build-china" ]]; then
+            compose_file="docker-compose.china.yml"
+        fi
+        
+        if docker-compose -f "$compose_file" ps --services --filter "status=running" | wc -l | grep -q "2"; then
             log INFO "容器已启动，检查服务可用性..."
             
             # 检查Web服务
@@ -659,7 +701,7 @@ wait_for_services() {
             log INFO "等待服务启动... (${elapsed}s/${max_wait}s)"
             # 显示当前容器状态
             log DEBUG "当前容器状态："
-            docker-compose ps 2>/dev/null || docker-compose -f docker-compose.china.yml ps 2>/dev/null || true
+            docker-compose -f "$compose_file" ps 2>/dev/null || true
         fi
         
         sleep $wait_interval
@@ -672,15 +714,15 @@ wait_for_services() {
     log INFO "📊 服务诊断报告："
     echo "=================================="
     echo "1. 容器状态："
-    docker-compose ps 2>/dev/null || docker-compose -f docker-compose.china.yml ps 2>/dev/null || echo "无法获取容器状态"
+    docker-compose -f "$compose_file" ps 2>/dev/null || echo "无法获取容器状态"
     
     echo ""
     echo "2. 服务日志 (最后20行)："
     echo "--- Web服务日志 ---"
-    docker-compose logs --tail=20 web 2>/dev/null || docker-compose -f docker-compose.china.yml logs --tail=20 web 2>/dev/null || echo "无法获取Web日志"
+    docker-compose -f "$compose_file" logs --tail=20 web 2>/dev/null || echo "无法获取Web日志"
     
     echo "--- 数据库日志 ---"  
-    docker-compose logs --tail=20 db 2>/dev/null || docker-compose -f docker-compose.china.yml logs --tail=20 db 2>/dev/null || echo "无法获取数据库日志"
+    docker-compose -f "$compose_file" logs --tail=20 db 2>/dev/null || echo "无法获取数据库日志"
     
     echo ""
     echo "3. 端口监听状态："
