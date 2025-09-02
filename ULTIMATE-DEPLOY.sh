@@ -639,7 +639,7 @@ smart_deploy() {
 wait_for_services() {
     log STEP "等待服务完全启动..."
     
-    local max_wait=180
+    local max_wait=60
     local wait_interval=5
     local elapsed=0
     
@@ -655,15 +655,47 @@ wait_for_services() {
             fi
         fi
         
-        if [[ $((elapsed % 15)) -eq 0 ]]; then
+        if [[ $((elapsed % 10)) -eq 0 ]]; then
             log INFO "等待服务启动... (${elapsed}s/${max_wait}s)"
+            # 显示当前容器状态
+            log DEBUG "当前容器状态："
+            docker-compose ps 2>/dev/null || docker-compose -f docker-compose.china.yml ps 2>/dev/null || true
         fi
         
         sleep $wait_interval
         elapsed=$((elapsed + wait_interval))
     done
     
-    log WARNING "服务启动超时，请手动检查"
+    log WARNING "服务启动超时，开始详细诊断..."
+    
+    # 详细的服务诊断
+    log INFO "📊 服务诊断报告："
+    echo "=================================="
+    echo "1. 容器状态："
+    docker-compose ps 2>/dev/null || docker-compose -f docker-compose.china.yml ps 2>/dev/null || echo "无法获取容器状态"
+    
+    echo ""
+    echo "2. 服务日志 (最后20行)："
+    echo "--- Web服务日志 ---"
+    docker-compose logs --tail=20 web 2>/dev/null || docker-compose -f docker-compose.china.yml logs --tail=20 web 2>/dev/null || echo "无法获取Web日志"
+    
+    echo "--- 数据库日志 ---"  
+    docker-compose logs --tail=20 db 2>/dev/null || docker-compose -f docker-compose.china.yml logs --tail=20 db 2>/dev/null || echo "无法获取数据库日志"
+    
+    echo ""
+    echo "3. 端口监听状态："
+    netstat -tuln 2>/dev/null | grep -E ':(5000|3306|8080)' || echo "相关端口未监听"
+    
+    echo ""
+    echo "4. 磁盘空间："
+    df -h / 2>/dev/null | tail -1 || echo "无法检查磁盘空间"
+    
+    echo ""
+    echo "5. 内存使用："
+    free -h 2>/dev/null || echo "无法检查内存使用"
+    
+    echo "=================================="
+    
     return 1
 }
 
