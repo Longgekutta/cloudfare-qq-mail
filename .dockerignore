@@ -69,20 +69,24 @@ test_*.py
 README.md
 docs/
 
-# Docker相关
-Dockerfile
-docker-compose.yml
-.dockerignore
+# Docker相关文件（保留部署必需的）
+# Dockerfile - 构建时需要
+# docker-compose.yml - 本地开发用
+# .dockerignore - 本文件
 
-# 本地配置
-.env
+# 本地开发配置（保留 .env.example 作为模板）
 .env.local
 config.local.py
 
-# 上传文件（运行时生成）
+# 上传文件（运行时生成的数据目录，但保留目录结构）
 uploads/*
+!uploads/.gitkeep
 temp_attachments/*
+!temp_attachments/.gitkeep
 received_emails/*
+!received_emails/.gitkeep
+sent_attachments/*
+!sent_attachments/.gitkeep
 
 # 备份文件
 *.bak
