@@ -471,13 +471,25 @@ choose_deployment_method() {
     log DEBUG "USE_PREBUILT_IMAGE: $USE_PREBUILT_IMAGE"
     log DEBUG "当前DEPLOY_MODE: ${DEPLOY_MODE:-未设置}"
     
+    # 检测网络环境并选择最佳构建方式
+    local is_china_network=false
+    if curl -s --connect-timeout 3 https://mirrors.tuna.tsinghua.edu.cn &>/dev/null; then
+        is_china_network=true
+        log INFO "检测到国内网络环境，将使用国内镜像优化"
+    fi
+    
     # 自动检测最佳部署方式
     if [[ "$USE_PREBUILT_IMAGE" == "true" ]]; then
         DEPLOY_MODE="image"
         log INFO "使用预构建镜像部署模式"
     elif [[ -f "Dockerfile" && -f "docker-compose.yml" ]]; then
-        DEPLOY_MODE="build"
-        log INFO "使用本地构建部署模式"
+        if [[ "$is_china_network" == "true" && -f "Dockerfile.china" && -f "docker-compose.china.yml" ]]; then
+            DEPLOY_MODE="build-china"
+            log INFO "使用国内优化版本构建部署（速度更快）"
+        else
+            DEPLOY_MODE="build"
+            log INFO "使用本地构建部署模式"
+        fi
     else
         DEPLOY_MODE="image"
         log INFO "默认使用镜像部署模式"
@@ -580,6 +592,21 @@ deploy_with_build() {
     log SUCCESS "本地构建部署完成"
 }
 
+# 国内优化构建部署
+deploy_with_build_china() {
+    log STEP "使用国内优化版本构建部署..."
+    
+    # 清理旧资源
+    log INFO "清理旧容器和镜像..."
+    docker-compose -f docker-compose.china.yml down --remove-orphans 2>/dev/null || true
+    
+    # 使用国内优化版本构建并启动
+    log INFO "使用国内镜像源构建并启动服务（速度更快）..."
+    docker-compose -f docker-compose.china.yml up -d --build --force-recreate
+    
+    log SUCCESS "国内优化构建部署完成"
+}
+
 # 智能部署
 smart_deploy() {
     log STEP "开始智能部署..."
@@ -590,6 +617,9 @@ smart_deploy() {
             ;;
         "build")
             deploy_with_build
+            ;;
+        "build-china")
+            deploy_with_build_china
             ;;
         "hybrid")
             # 先尝试镜像，失败则构建
