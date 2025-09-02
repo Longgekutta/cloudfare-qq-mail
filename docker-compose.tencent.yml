@@ -1,11 +1,15 @@
-version: '3.8'
-
 services:
   web:
     build:
       context: .
       dockerfile: Dockerfile.tencent
     container_name: cloudfare-qq-mail-web-tencent
+    extra_hosts:
+      - "deb.debian.org:127.0.0.1"
+      - "security.debian.org:127.0.0.1"
+      - "archive.debian.org:127.0.0.1"
+      - "httpredir.debian.org:127.0.0.1"
+      - "ftp.debian.org:127.0.0.1"
     ports:
       - "${WEB_PORT:-5000}:5000"
     depends_on:

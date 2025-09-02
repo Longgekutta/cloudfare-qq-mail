@@ -42,13 +42,7 @@ RUN echo "# 腾讯云专用APT配置" > /etc/apt/apt.conf.d/99tencent && \
     echo "Acquire::ForceIPv4 \"true\";" >> /etc/apt/apt.conf.d/99tencent && \
     echo "# 优先使用腾讯云内网" >> /etc/apt/apt.conf.d/99tencent
 
-# 彻底阻止官方源访问（避免回退）
-RUN echo "# 阻止官方Debian源回退" >> /etc/hosts && \
-    echo "127.0.0.1 deb.debian.org" >> /etc/hosts && \
-    echo "127.0.0.1 security.debian.org" >> /etc/hosts && \
-    echo "127.0.0.1 archive.debian.org" >> /etc/hosts && \
-    echo "127.0.0.1 httpredir.debian.org" >> /etc/hosts && \
-    echo "127.0.0.1 ftp.debian.org" >> /etc/hosts
+# 注意：不能在Dockerfile中修改/etc/hosts，将通过sources.list完全替换来避免官方源
 
 # 设置工作目录
 WORKDIR /app
