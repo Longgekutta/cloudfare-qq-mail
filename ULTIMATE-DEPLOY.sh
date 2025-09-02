@@ -10,6 +10,12 @@
 
 set -euo pipefail
 
+# 设置默认变量值，避免未定义变量导致脚本退出
+VERBOSE=${VERBOSE:-false}
+DEPLOY_MODE=${DEPLOY_MODE:-""}
+USE_PREBUILT_IMAGE=${USE_PREBUILT_IMAGE:-false}
+SKIP_DOCKER_INSTALL=${SKIP_DOCKER_INSTALL:-false}
+
 # 项目信息
 readonly PROJECT_NAME="cloudfare-qq-mail"
 readonly GITHUB_REPO="https://github.com/Longgekutta/cloudfare-qq-mail.git"
@@ -32,10 +38,6 @@ readonly WHITE='\033[1;37m'
 readonly NC='\033[0m'
 
 # 全局变量
-declare -g DEPLOY_MODE=""
-declare -g USE_PREBUILT_IMAGE=false
-declare -g SKIP_DOCKER_INSTALL=false
-declare -g VERBOSE=false
 declare -i START_TIME=$(date +%s)
 
 # 日志函数
@@ -436,6 +438,20 @@ EOF
     done
     
     log SUCCESS "配置文件和目录创建完成"
+    
+    # 调试信息：验证文件是否创建成功
+    log DEBUG "验证配置文件："
+    if [[ -f ".env" ]]; then
+        log DEBUG "✅ .env文件已创建"
+    else
+        log ERROR "❌ .env文件创建失败"
+    fi
+    
+    if [[ -f "docker-compose.yml" ]]; then
+        log DEBUG "✅ docker-compose.yml文件存在"
+    else
+        log WARNING "⚠️ docker-compose.yml文件不存在"
+    fi
 }
 
 # 选择部署方式
@@ -445,6 +461,11 @@ choose_deployment_method() {
     fi
     
     log STEP "选择部署方式..."
+    
+    # 调试信息
+    log DEBUG "当前目录: $(pwd)"
+    log DEBUG "USE_PREBUILT_IMAGE: $USE_PREBUILT_IMAGE"
+    log DEBUG "当前DEPLOY_MODE: ${DEPLOY_MODE:-未设置}"
     
     # 自动检测最佳部署方式
     if [[ "$USE_PREBUILT_IMAGE" == "true" ]]; then
@@ -457,6 +478,8 @@ choose_deployment_method() {
         DEPLOY_MODE="image"
         log INFO "默认使用镜像部署模式"
     fi
+    
+    log SUCCESS "部署方式选择完成: $DEPLOY_MODE"
 }
 
 # 预构建镜像部署
@@ -803,12 +826,36 @@ main() {
     echo "=== 终极部署开始: $(date) ===" > "$DEPLOY_LOG"
     
     show_banner
-    detect_environment
-    install_docker_smart
-    get_project_code
-    create_complete_config
-    choose_deployment_method
-    smart_deploy
+    
+    log INFO "📋 开始环境检测..."
+    if ! detect_environment; then
+        error_exit "环境检测失败"
+    fi
+    
+    log INFO "🐳 开始Docker环境检查..."
+    if ! install_docker_smart; then
+        error_exit "Docker环境配置失败"
+    fi
+    
+    log INFO "📥 开始获取项目代码..."
+    if ! get_project_code; then
+        error_exit "项目代码获取失败"
+    fi
+    
+    log INFO "⚙️ 开始创建配置..."
+    if ! create_complete_config; then
+        error_exit "配置创建失败"
+    fi
+    
+    log INFO "🎯 开始选择部署方式..."
+    if ! choose_deployment_method; then
+        error_exit "部署方式选择失败"
+    fi
+    
+    log INFO "🚀 开始智能部署..."
+    if ! smart_deploy; then
+        error_exit "智能部署失败"
+    fi
     
     if wait_for_services && verify_deployment; then
         show_deployment_result "true"
