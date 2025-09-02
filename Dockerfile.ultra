@@ -1,0 +1,165 @@
+# 超级优化版 - 彻底解决网络问题
+FROM python:3.9-slim
+
+# 设置标签信息
+LABEL maintainer="cloudfare-qq-mail"
+LABEL version="1.0.0-ultra"
+LABEL description="Cloudfare QQ Mail Service - Ultra Optimized for China"
+
+# 设置环境变量
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV DEBIAN_FRONTEND=noninteractive
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+
+# 第1步：彻底清理所有官方源并配置多镜像源智能切换
+RUN rm -rf /etc/apt/sources.list* && \
+    mkdir -p /etc/apt/sources.list.d && \
+    echo "# 智能多镜像源配置 - 超时自动切换" > /etc/apt/sources.list && \
+    echo "deb https://mirrors.ustc.edu.cn/debian/ bookworm main contrib non-free non-free-firmware" >> /etc/apt/sources.list && \
+    echo "deb https://mirrors.ustc.edu.cn/debian/ bookworm-updates main contrib non-free non-free-firmware" >> /etc/apt/sources.list && \
+    echo "deb https://mirrors.ustc.edu.cn/debian-security/ bookworm-security main contrib non-free non-free-firmware" >> /etc/apt/sources.list && \
+    echo "" >> /etc/apt/sources.list && \
+    echo "# 备用源1 - 清华大学" >> /etc/apt/sources.list && \
+    echo "deb https://mirrors.tuna.tsinghua.edu.cn/debian/ bookworm main contrib non-free non-free-firmware" >> /etc/apt/sources.list && \
+    echo "deb https://mirrors.tuna.tsinghua.edu.cn/debian/ bookworm-updates main contrib non-free non-free-firmware" >> /etc/apt/sources.list && \
+    echo "deb https://mirrors.tuna.tsinghua.edu.cn/debian-security/ bookworm-security main contrib non-free non-free-firmware" >> /etc/apt/sources.list && \
+    echo "" >> /etc/apt/sources.list && \
+    echo "# 备用源2 - 阿里云" >> /etc/apt/sources.list && \
+    echo "deb https://mirrors.aliyun.com/debian/ bookworm main contrib non-free non-free-firmware" >> /etc/apt/sources.list && \
+    echo "deb https://mirrors.aliyun.com/debian/ bookworm-updates main contrib non-free non-free-firmware" >> /etc/apt/sources.list && \
+    echo "deb https://mirrors.aliyun.com/debian-security/ bookworm-security main contrib non-free non-free-firmware" >> /etc/apt/sources.list && \
+    echo "" >> /etc/apt/sources.list && \
+    echo "# 备用源3 - 华为云" >> /etc/apt/sources.list && \
+    echo "deb https://mirrors.huaweicloud.com/debian/ bookworm main contrib non-free non-free-firmware" >> /etc/apt/sources.list && \
+    echo "deb https://mirrors.huaweicloud.com/debian/ bookworm-updates main contrib non-free non-free-firmware" >> /etc/apt/sources.list && \
+    echo "deb https://mirrors.huaweicloud.com/debian-security/ bookworm-security main contrib non-free non-free-firmware" >> /etc/apt/sources.list
+
+# 第2步：配置APT智能超时和镜像源切换策略
+RUN echo "# APT智能配置 - 快速超时切换" > /etc/apt/apt.conf.d/99ultra && \
+    echo "Acquire::http::Timeout \"5\";" >> /etc/apt/apt.conf.d/99ultra && \
+    echo "Acquire::https::Timeout \"5\";" >> /etc/apt/apt.conf.d/99ultra && \
+    echo "Acquire::ftp::Timeout \"5\";" >> /etc/apt/apt.conf.d/99ultra && \
+    echo "Acquire::Retries \"2\";" >> /etc/apt/apt.conf.d/99ultra && \
+    echo "APT::Get::Assume-Yes \"true\";" >> /etc/apt/apt.conf.d/99ultra && \
+    echo "APT::Install-Recommends \"false\";" >> /etc/apt/apt.conf.d/99ultra && \
+    echo "APT::Install-Suggests \"false\";" >> /etc/apt/apt.conf.d/99ultra && \
+    echo "APT::Acquire::AllowInsecureRepositories \"false\";" >> /etc/apt/apt.conf.d/99ultra && \
+    echo "APT::Acquire::AllowDowngradeToInsecureRepositories \"false\";" >> /etc/apt/apt.conf.d/99ultra && \
+    echo "Acquire::Check-Valid-Until \"false\";" >> /etc/apt/apt.conf.d/99ultra && \
+    echo "# 禁用官方源回退机制" >> /etc/apt/apt.conf.d/99ultra && \
+    echo "Acquire::ForceIPv4 \"true\";" >> /etc/apt/apt.conf.d/99ultra
+
+# 第3步：阻止DNS解析官方源（彻底方案）
+RUN echo "# 阻止访问官方Debian源" >> /etc/hosts && \
+    echo "127.0.0.1 deb.debian.org" >> /etc/hosts && \
+    echo "127.0.0.1 security.debian.org" >> /etc/hosts && \
+    echo "127.0.0.1 archive.debian.org" >> /etc/hosts && \
+    echo "127.0.0.1 httpredir.debian.org" >> /etc/hosts && \
+    echo "127.0.0.1 ftp.debian.org" >> /etc/hosts
+
+# 设置工作目录
+WORKDIR /app
+
+# 创建非root用户
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+# 第4步：智能安装系统依赖（多源容错机制）
+RUN echo "开始智能包安装..." && \
+    for i in 1 2 3; do \
+        echo "尝试第 $i 次包更新..." && \
+        apt-get clean && \
+        apt-get update --fix-missing -o Acquire::CompressionTypes::Order::=gz && \
+        if [ $? -eq 0 ]; then \
+            echo "包列表更新成功，开始安装依赖..." && \
+            apt-get install -y --no-install-recommends --fix-missing \
+                gcc \
+                default-libmysqlclient-dev \
+                pkg-config \
+                curl \
+                default-mysql-client \
+                wget \
+                unzip \
+                ca-certificates \
+                build-essential \
+                python3-dev && \
+            echo "依赖安装成功" && break; \
+        else \
+            echo "第 $i 次尝试失败，切换镜像源..." && \
+            case $i in \
+                1) sed -i 's/mirrors\.ustc\.edu\.cn/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list ;; \
+                2) sed -i 's/mirrors\.tuna\.tsinghua\.edu\.cn/mirrors.aliyun.com/g' /etc/apt/sources.list ;; \
+            esac; \
+        fi; \
+    done && \
+    rm -rf /var/lib/apt/lists/* && \
+    apt-get clean && \
+    apt-get autoclean
+
+# 第5步：配置多个PyPI镜像源
+RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple/ && \
+    pip config set global.trusted-host pypi.tuna.tsinghua.edu.cn && \
+    pip config set global.extra-index-url "https://mirrors.aliyun.com/pypi/simple/ https://pypi.mirrors.ustc.edu.cn/simple/" && \
+    pip config set global.timeout 30
+
+# 复制依赖文件
+COPY requirements.txt .
+
+# 第6步：智能安装Python依赖（多源容错）
+RUN echo "开始智能Python包安装..." && \
+    pip install --no-cache-dir --upgrade pip && \
+    for source in \
+        "https://pypi.tuna.tsinghua.edu.cn/simple/" \
+        "https://mirrors.aliyun.com/pypi/simple/" \
+        "https://pypi.mirrors.ustc.edu.cn/simple/" \
+        "https://pypi.douban.com/simple/"; do \
+        echo "尝试从 $source 安装..." && \
+        pip install --no-cache-dir -r requirements.txt -i "$source" && \
+        echo "Python依赖安装成功" && break || \
+        echo "从 $source 安装失败，尝试下一个源..."; \
+    done
+
+# 复制应用文件
+COPY app.py config.py ./
+COPY *.py ./
+COPY database/ ./database/
+COPY frontend/ ./frontend/
+COPY nginx/ ./nginx/
+
+# 复制脚本和配置文件
+COPY *.sh ./
+COPY *.bat ./
+COPY docker-compose*.yml ./
+COPY .env.production ./.env
+
+# 创建目录并设置权限
+RUN mkdir -p /app/uploads /app/temp_attachments /app/received_emails /app/sent_attachments /app/logs /app/database/backup && \
+    chmod 755 /app/uploads /app/temp_attachments /app/received_emails /app/sent_attachments /app/logs /app/database/backup && \
+    chmod +x /app/docker-init.sh && \
+    chmod +x /app/*.sh 2>/dev/null || true
+
+# 验证安装结果
+RUN echo "=== 安装验证 ===" && \
+    python --version && \
+    pip --version && \
+    mysql --version && \
+    curl --version && \
+    ls -la /app/ && \
+    echo "🎉 超级优化版构建完成"
+
+# 设置文件所有权
+RUN chown -R appuser:appuser /app
+
+# 暴露端口
+EXPOSE 5000
+
+# 切换用户
+USER appuser
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:5000/ || exit 1
+
+# 启动应用
+CMD ["bash", "/app/docker-init.sh"]

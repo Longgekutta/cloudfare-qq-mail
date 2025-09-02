@@ -1,0 +1,78 @@
+# 简化版Dockerfile - 专门用于解决依赖问题
+FROM python:3.9-slim
+
+# 设置标签信息
+LABEL maintainer="cloudfare-qq-mail"
+LABEL version="1.0.0-simple"
+LABEL description="Cloudfare QQ Mail Service - Simplified for Stability"
+
+# 设置环境变量
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV DEBIAN_FRONTEND=noninteractive
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+
+# 设置工作目录
+WORKDIR /app
+
+# 创建非root用户
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+# 最简化的系统依赖安装（避免复杂的镜像源问题）
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        gcc \
+        default-libmysqlclient-dev \
+        pkg-config \
+        curl \
+        && rm -rf /var/lib/apt/lists/* \
+        && apt-get clean
+
+# 配置pip使用清华源
+RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple/ && \
+    pip config set global.trusted-host pypi.tuna.tsinghua.edu.cn
+
+# 复制并安装Python依赖
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# 复制应用文件
+COPY app.py config.py ./
+COPY *.py ./
+COPY database/ ./database/
+COPY frontend/ ./frontend/
+
+# 复制配置文件
+COPY *.sh ./
+COPY docker-compose*.yml ./
+COPY .env.production ./.env
+
+# 创建目录和设置权限
+RUN mkdir -p /app/uploads /app/temp_attachments /app/received_emails /app/sent_attachments /app/logs /app/database/backup && \
+    chmod 755 /app/uploads /app/temp_attachments /app/received_emails /app/sent_attachments /app/logs /app/database/backup && \
+    chmod +x /app/docker-init.sh && \
+    chmod +x /app/*.sh 2>/dev/null || true
+
+# 验证安装
+RUN echo "=== 简化版验证 ===" && \
+    python --version && \
+    pip --version && \
+    echo "✅ 简化版构建完成"
+
+# 设置文件所有权
+RUN chown -R appuser:appuser /app
+
+# 暴露端口
+EXPOSE 5000
+
+# 切换用户
+USER appuser
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:5000/ || exit 1
+
+# 启动应用
+CMD ["bash", "/app/docker-init.sh"]

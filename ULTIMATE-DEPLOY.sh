@@ -494,7 +494,10 @@ choose_deployment_method() {
         DEPLOY_MODE="image"
         log INFO "使用预构建镜像部署模式"
     elif [[ -f "Dockerfile" && -f "docker-compose.yml" ]]; then
-        if [[ "$cloud_provider" == "tencent" && -f "Dockerfile.tencent" && -f "docker-compose.tencent.yml" ]]; then
+        if [[ -f "Dockerfile.simple" && -f "docker-compose.simple.yml" ]]; then
+            DEPLOY_MODE="build-simple"
+            log INFO "🚀 使用简化版构建部署（稳定可靠，避免依赖冲突）"
+        elif [[ "$cloud_provider" == "tencent" && -f "Dockerfile.tencent" && -f "docker-compose.tencent.yml" ]]; then
             DEPLOY_MODE="build-tencent"
             log INFO "🚀 使用腾讯云专用优化版本（内网高速，预计1-3分钟完成）"
         elif [[ "$cloud_provider" == "aliyun" && -f "Dockerfile.china" && -f "docker-compose.china.yml" ]]; then
@@ -639,6 +642,21 @@ deploy_with_build_china() {
     log SUCCESS "国内优化构建部署完成"
 }
 
+# 简化版构建部署（推荐）
+deploy_with_build_simple() {
+    log STEP "🚀 使用简化版构建部署（避免依赖冲突）..."
+    
+    # 清理旧资源
+    log INFO "清理旧容器和镜像..."
+    docker-compose -f docker-compose.simple.yml down --remove-orphans 2>/dev/null || true
+    
+    # 使用简化版构建并启动
+    log INFO "🚀 使用简化版构建（最稳定，避免复杂依赖问题）..."
+    docker-compose -f docker-compose.simple.yml up -d --build --force-recreate
+    
+    log SUCCESS "🎉 简化版构建部署完成"
+}
+
 # 智能部署
 smart_deploy() {
     log STEP "开始智能部署..."
@@ -650,6 +668,9 @@ smart_deploy() {
         "build")
             deploy_with_build
             ;;
+        "build-simple")
+            deploy_with_build_simple
+            ;;
         "build-tencent")
             deploy_with_build_tencent
             ;;
@@ -659,9 +680,9 @@ smart_deploy() {
         "hybrid")
             # 先尝试镜像，失败则构建
             if ! deploy_with_image; then
-                log INFO "镜像部署失败，尝试本地构建..."
-                DEPLOY_MODE="build"
-                deploy_with_build
+                log INFO "镜像部署失败，尝试简化版构建..."
+                DEPLOY_MODE="build-simple"
+                deploy_with_build_simple
             fi
             ;;
         *)
@@ -681,10 +702,14 @@ wait_for_services() {
     while [[ $elapsed -lt $max_wait ]]; do
         # 检查容器状态（支持不同的compose文件）
         local compose_file="docker-compose.yml"
-        if [[ "$DEPLOY_MODE" == "build-tencent" ]]; then
+        if [[ "$DEPLOY_MODE" == "build-simple" ]]; then
+            compose_file="docker-compose.simple.yml"
+        elif [[ "$DEPLOY_MODE" == "build-tencent" ]]; then
             compose_file="docker-compose.tencent.yml"
         elif [[ "$DEPLOY_MODE" == "build-china" ]]; then
             compose_file="docker-compose.china.yml"
+        elif [[ "$DEPLOY_MODE" == "image" ]]; then
+            compose_file="docker-compose.temp.yml"
         fi
         
         if docker-compose -f "$compose_file" ps --services --filter "status=running" | wc -l | grep -q "2"; then
