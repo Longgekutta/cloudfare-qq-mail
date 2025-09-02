@@ -19,7 +19,7 @@ readonly VERSION="v3.0-ultimate"
 
 # 日志配置
 readonly DEPLOY_LOG="/tmp/${PROJECT_NAME}-deploy-$(date +%s).log"
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR="$(pwd)"
 
 # 颜色定义
 readonly RED='\033[0;31m'
@@ -114,15 +114,13 @@ detect_environment() {
         log WARNING "检测到运行在容器内，某些功能可能受限"
     fi
     
-    # 检测网络连接
-    if curl -s --connect-timeout 5 https://github.com &>/dev/null; then
-        log SUCCESS "GitHub 网络连接正常"
-    elif curl -s --connect-timeout 5 https://gitee.com &>/dev/null; then
-        log WARNING "GitHub连接失败，将使用Gitee镜像"
-        GITHUB_REPO="$GITEE_REPO"
+    # 检测网络连接 (优先检测Gitee，国内访问更快)
+    if curl -s --connect-timeout 3 https://gitee.com &>/dev/null; then
+        log SUCCESS "Gitee 网络连接正常，将优先使用国内镜像"
+    elif curl -s --connect-timeout 3 https://github.com &>/dev/null; then
+        log INFO "GitHub 网络连接正常"
     else
-        log ERROR "网络连接异常，请检查网络设置"
-        return 1
+        log WARNING "网络连接检测超时，将跳过网络检测继续部署"
     fi
     
     log SUCCESS "环境检测完成"
@@ -211,8 +209,8 @@ get_project_code() {
         return 0
     fi
     
-    # 尝试从多个源获取代码
-    local repos=("$GITHUB_REPO" "$GITEE_REPO")
+    # 尝试从多个源获取代码 (优先使用Gitee，速度更快)
+    local repos=("$GITEE_REPO" "$GITHUB_REPO")
     local target_dir="${PROJECT_NAME}"
     
     for repo in "${repos[@]}"; do
