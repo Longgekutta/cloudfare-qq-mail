@@ -445,13 +445,17 @@ EOF
         log DEBUG "✅ .env文件已创建"
     else
         log ERROR "❌ .env文件创建失败"
+        return 1
     fi
     
     if [[ -f "docker-compose.yml" ]]; then
         log DEBUG "✅ docker-compose.yml文件存在"
     else
-        log WARNING "⚠️ docker-compose.yml文件不存在"
+        log DEBUG "ℹ️ docker-compose.yml文件不存在（将使用镜像部署）"
     fi
+    
+    # 确保函数成功返回
+    return 0
 }
 
 # 选择部署方式
