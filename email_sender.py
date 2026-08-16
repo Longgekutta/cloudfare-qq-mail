@@ -15,7 +15,7 @@ class EmailSender:
     def __init__(self, api_key: str = None):
         """初始化邮件发送器"""
         if api_key is None:
-            api_key = os.getenv('RESEND_API_KEY', "re_00000000_REPLACED_DUMMY_KEY_0000")  # 生产环境请使用环境变量
+            api_key = os.getenv('RESEND_API_KEY')  # 生产环境请使用环境变量
         resend.api_key = api_key
         self.api_key = api_key
         print(f"📧 邮件发送器已初始化")
@@ -172,4 +172,3 @@ if __name__ == "__main__":
         print(f"🎉 测试成功，邮件ID: {result}")
     else:
         print("❌ 测试失败")
-

@@ -6,8 +6,8 @@
 import os
 
 # 易支付商户信息 - 优先使用环境变量
-YIPAY_PID = os.getenv('YIPAY_PID', "6166")  # 商户PID
-YIPAY_KEY = os.getenv('YIPAY_KEY', "deefc7cc0449be9cb621b7800f5e7f1c")  # 商户KEY，生产环境请使用环境变量
+YIPAY_PID = os.getenv('YIPAY_PID')  # 商户PID
+YIPAY_KEY = os.getenv('YIPAY_KEY')  # 商户KEY，生产环境请使用环境变量
 YIPAY_GATEWAY = os.getenv('YIPAY_GATEWAY', "https://pay.yzhifupay.com/")  # 支付网关
 
 # 支付类型映射

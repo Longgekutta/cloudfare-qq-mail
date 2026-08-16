@@ -40,7 +40,7 @@ print(f"保存目录: {EMAIL_SAVE_DIR}")
 
 DB_HOST = os.getenv('DB_HOST', 'localhost')
 DB_USER = os.getenv('DB_USER', 'root')
-DB_PASSWORD = os.getenv('DB_PASSWORD', '518107qW')  # 生产环境请使用环境变量
+DB_PASSWORD = os.getenv('DB_PASSWORD')  # 生产环境请使用环境变量
 DB_NAME = os.getenv('DB_NAME', 'cloudfare_qq_mail')
 
 print(f"数据库名称: {DB_NAME}")

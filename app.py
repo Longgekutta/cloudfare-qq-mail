@@ -23,7 +23,7 @@ from yipay_config import PAYMENT_TYPES, YIPAY_PID, YIPAY_KEY
 
 # 创建Flask应用
 app = Flask(__name__, template_folder='frontend/templates', static_folder='frontend/static')
-app.secret_key = os.getenv('SECRET_KEY', 'cloudfare_qq_mail_secret_key_2025')  # 生产环境请使用环境变量
+app.secret_key = os.getenv('SECRET_KEY')  # 生产环境请使用环境变量
 
 # 创建数据库管理器实例
 # 注意：DatabaseManager内部使用连接池，支持多线程
@@ -3886,7 +3886,7 @@ if __name__ == '__main__':
     try:
         print("🚀 启动Flask Web应用...")
         print("📍 访问地址: http://localhost:5000")
-        print("🔐 管理员账号: admin/518107qW, longgekutta/518107qW")
+        print("🔐 管理员账号: admin/CHANGE_ME, longgekutta/CHANGE_ME")
         print("=" * 50)
 
         # 确保必要的目录存在

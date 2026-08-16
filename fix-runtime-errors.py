@@ -47,9 +47,9 @@ def check_environment_variables():
     required_vars = {
         'DB_HOST': 'db',
         'DB_USER': 'root', 
-        'DB_PASSWORD': '518107qW',
+        'DB_PASSWORD': os.environ.get('DB_PASSWORD', ''),
         'DB_NAME': 'cloudfare_qq_mail',
-        'SECRET_KEY': 'cloudfare_qq_mail_secret_key_2025',
+        'SECRET_KEY': os.environ.get('SECRET_KEY', ''),
         'QQ_EMAIL': 'YOUR_QQ_EMAIL@qq.com',
         'QQ_AUTH_CODE': 'YOUR_QQ_AUTH_CODE',
         'TARGET_DOMAIN': 'shiep.edu.kg'
@@ -123,7 +123,7 @@ def check_database_connection():
     db_config = {
         'host': os.environ.get('DB_HOST', 'localhost'),
         'user': os.environ.get('DB_USER', 'root'),
-        'password': os.environ.get('DB_PASSWORD', '518107qW'),
+        'password': os.environ.get('DB_PASSWORD'),
         'database': os.environ.get('DB_NAME', 'cloudfare_qq_mail')
     }
     

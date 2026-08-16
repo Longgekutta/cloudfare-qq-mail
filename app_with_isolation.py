@@ -15,7 +15,7 @@ from database.db_manager import DatabaseManager
 
 # 创建Flask应用
 app = Flask(__name__, template_folder='frontend/templates', static_folder='frontend/static')
-app.secret_key = 'cloudfare_qq_mail_secret_key_2025'  # 在生产环境中应该使用更安全的密钥
+app.secret_key = os.getenv('SECRET_KEY', 'CHANGE_ME')  # 在生产环境中应该使用更安全的密钥
 
 # 创建数据库管理器实例
 db_manager = DatabaseManager()

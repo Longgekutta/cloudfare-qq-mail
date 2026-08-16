@@ -17,7 +17,7 @@ import os
 # 从环境变量或email_config获取数据库配置
 DB_HOST = os.environ.get('DB_HOST', 'localhost')
 DB_USER = os.environ.get('DB_USER', 'root')
-DB_PASSWORD = os.environ.get('DB_PASSWORD', '518107qW')
+DB_PASSWORD = os.environ.get('DB_PASSWORD')
 DB_NAME = os.environ.get('DB_NAME', 'cloudfare_qq_mail')
 
 class DatabaseManager:
