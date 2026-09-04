@@ -80,8 +80,14 @@ class ComponentConnector:
                 if sent_time_str:
                     try:
                         from email.utils import parsedate_to_datetime
-                        sent_time = parsedate_to_datetime(sent_time_str)
-                    except:
+                        parsed_dt = parsedate_to_datetime(sent_time_str)
+                        if parsed_dt is None:
+                            sent_time = datetime.now()
+                        elif parsed_dt.tzinfo is not None:
+                            sent_time = parsed_dt.astimezone().replace(tzinfo=None)
+                        else:
+                            sent_time = parsed_dt
+                    except Exception:
                         sent_time = datetime.now()
                 else:
                     sent_time = datetime.now()
