@@ -36,8 +36,10 @@ def index():
         # 用户已登录，获取用户信息
         user = None
         if db_manager.connect():
-            user = db_manager.get_user_by_username(session['username'])
-            db_manager.disconnect()
+            try:
+                user = db_manager.get_user_by_username(session['username'])
+            finally:
+                db_manager.disconnect()
         
         # 渲染首页模板，传递用户信息
         return render_template('index.html', user=user)
@@ -59,8 +61,10 @@ def login():
         # 验证用户名和密码
         user = None
         if db_manager.connect():
-            user = db_manager.get_user_by_username(username)
-            db_manager.disconnect()
+            try:
+                user = db_manager.get_user_by_username(username)
+            finally:
+                db_manager.disconnect()
         
         # 检查用户是否存在并且密码正确
         if user:
@@ -82,11 +86,13 @@ def login():
                     try:
                         hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
                         if db_manager.connect():
-                            db_manager.execute_query(
-                                "UPDATE users SET password = %s WHERE id = %s",
-                                (hashed, user['id'])
-                            )
-                            db_manager.disconnect()
+                            try:
+                                db_manager.execute_query(
+                                    "UPDATE users SET password = %s WHERE id = %s",
+                                    (hashed, user['id'])
+                                )
+                            finally:
+                                db_manager.disconnect()
                     except Exception:
                         pass  # 升级失败不影响登录
             

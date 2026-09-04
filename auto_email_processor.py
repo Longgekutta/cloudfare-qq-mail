@@ -93,9 +93,9 @@ class AutoEmailProcessor:
                             import email.utils
                             # 解析邮件日期
                             parsed_date = email.utils.parsedate_to_datetime(sent_time_raw)
-                            # 转换为MySQL兼容的格式（去掉时区信息）
+                            # 转换为本地时区后再去掉时区信息，确保时间准确且MySQL兼容
                             if parsed_date.tzinfo is not None:
-                                sent_time = parsed_date.replace(tzinfo=None)
+                                sent_time = parsed_date.astimezone().replace(tzinfo=None)
                             else:
                                 sent_time = parsed_date
                         except Exception as date_error:
