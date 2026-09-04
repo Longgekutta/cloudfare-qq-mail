@@ -23,7 +23,14 @@ from yipay_config import PAYMENT_TYPES, YIPAY_PID, YIPAY_KEY
 
 # 创建Flask应用
 app = Flask(__name__, template_folder='frontend/templates', static_folder='frontend/static')
-app.secret_key = os.getenv('SECRET_KEY')  # 生产环境请使用环境变量
+_secret_key = os.getenv('SECRET_KEY')
+if not _secret_key:
+    import secrets
+    _secret_key = secrets.token_hex(32)
+    print('⚠️ 未设置 SECRET_KEY，已生成临时会话密钥；重启后会话将失效，请在 .env 中配置固定密钥')
+app.secret_key = _secret_key
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 # 创建数据库管理器实例
 # 注意：DatabaseManager内部使用连接池，支持多线程

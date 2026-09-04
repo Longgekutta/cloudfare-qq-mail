@@ -15,7 +15,12 @@ from database.db_manager import DatabaseManager
 
 # 创建Flask应用
 app = Flask(__name__, template_folder='frontend/templates', static_folder='frontend/static')
-app.secret_key = os.getenv('SECRET_KEY', 'CHANGE_ME')  # 在生产环境中应该使用更安全的密钥
+_secret_key = os.getenv('SECRET_KEY')
+if not _secret_key:
+    import secrets
+    _secret_key = secrets.token_hex(32)
+    print('⚠️ 未设置 SECRET_KEY，已生成临时会话密钥；重启后会话将失效，请在 .env 中配置固定密钥')
+app.secret_key = _secret_key
 
 # 创建数据库管理器实例
 db_manager = DatabaseManager()
@@ -59,22 +64,42 @@ def login():
         
         # 检查用户是否存在并且密码正确
         if user:
-            # 使用bcrypt验证密码
+            # 使用bcrypt验证密码，兼容明文密码（迁移期）
             import bcrypt
-            try:
-                if bcrypt.checkpw(password.encode('utf-8'), user['password'].encode('utf-8')):
-                    # 登录成功，设置会话
-                    session['user_id'] = user['id']
-                    session['username'] = user['username']
-                    return redirect(url_for('index'))
-                else:
-                    # 密码错误
-                    return render_template('login.html', error='用户名或密码错误')
-            except Exception as e:
-                # 密码验证出错，可能是密码格式问题
+            stored_password = user['password']
+            
+            # 密码格式检测：bcrypt哈希以$2开头
+            if stored_password.startswith('$2'):
+                try:
+                    password_valid = bcrypt.checkpw(password.encode('utf-8'), stored_password.encode('utf-8'))
+                except Exception:
+                    password_valid = False
+            else:
+                # 兼容旧版本明文密码（需改进为仅用于迁移）
+                password_valid = (password == stored_password)
+                if password_valid:
+                    # 自动升级为bcrypt哈希
+                    try:
+                        hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+                        if db_manager.connect():
+                            db_manager.execute_query(
+                                "UPDATE users SET password = %s WHERE id = %s",
+                                (hashed, user['id'])
+                            )
+                            db_manager.disconnect()
+                    except Exception:
+                        pass  # 升级失败不影响登录
+            
+            if password_valid:
+                # 登录成功，设置会话（重新生成ID防会话固定）
+                session.clear()
+                session['user_id'] = user['id']
+                session['username'] = user['username']
+                return redirect(url_for('index'))
+            else:
                 return render_template('login.html', error='用户名或密码错误')
         else:
-            # 用户不存在
+            # 用户不存在（为防用户枚举，返回相同错误信息）
             return render_template('login.html', error='用户名或密码错误')
     
     # GET请求，渲染登录页面
