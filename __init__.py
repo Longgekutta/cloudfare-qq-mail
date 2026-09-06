@@ -39,6 +39,6 @@ __all__ = [
     'EMAIL_SAVE_DIR'
 ]
 
-print("📧 CloudFlare-QQ邮件处理系统已加载")
-print(f"版本: {__version__}")
-print("基于成功经验整合，稳定可靠！")
+import logging
+logger = logging.getLogger(__name__)
+logger.debug("📧 CloudFlare-QQ邮件处理系统已加载 (v%s) - 基于成功经验整合，稳定可靠！", __version__)
