@@ -75,7 +75,9 @@ def login():
             # 密码格式检测：bcrypt哈希以$2开头
             if not isinstance(stored_password, str):
                 stored_password = ''
-            if not stored_password:
+            
+            # 防御性检查：拒绝空密码和空输入
+            if not stored_password or not password:
                 password_valid = False
             elif stored_password.startswith('$2'):
                 try:
@@ -84,6 +86,7 @@ def login():
                     password_valid = False
             else:
                 # 兼容旧版本明文密码（需改进为仅用于迁移）
+                # 明确拒绝空密码登录，避免数据库空密码导致的认证绕过
                 password_valid = bool(password) and (password == stored_password)
                 if password_valid:
                     # 自动升级为bcrypt哈希
