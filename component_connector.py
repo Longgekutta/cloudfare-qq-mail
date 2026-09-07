@@ -84,10 +84,13 @@ class ComponentConnector:
                         if parsed_dt is None:
                             sent_time = datetime.now()
                         elif parsed_dt.tzinfo is not None:
+                            # 统一转换为本地时区后再去掉时区信息，确保MySQL兼容
                             sent_time = parsed_dt.astimezone().replace(tzinfo=None)
                         else:
                             sent_time = parsed_dt
-                    except Exception:
+                    except Exception as date_error:
+                        # 记录解析失败日志，便于排查问题
+                        print(f"⚠️ 日期解析失败，使用当前时间: {date_error}")
                         sent_time = datetime.now()
                 else:
                     sent_time = datetime.now()
