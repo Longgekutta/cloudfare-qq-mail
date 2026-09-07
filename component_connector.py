@@ -105,6 +105,10 @@ class ComponentConnector:
                 
                 if existing_result:
                     print(f"⏭️ 邮件 {email_id} 已存在于数据库中，跳过重复存储")
+                    try:
+                        self.db_manager.disconnect()
+                    except Exception as disconnect_error:
+                        print(f"⚠️ 释放数据库连接失败: {disconnect_error}")
                     return True  # 返回True表示"处理成功"，避免重复处理
                 
                 # 重新解析.eml文件以获取完整的HTML内容

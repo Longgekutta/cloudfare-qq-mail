@@ -6,6 +6,7 @@ Flask Web应用主文件（带用户隔离功能）
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 import os
 import sys
+from datetime import timedelta
 
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -15,12 +16,28 @@ from database.db_manager import DatabaseManager
 
 # 创建Flask应用
 app = Flask(__name__, template_folder='frontend/templates', static_folder='frontend/static')
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    SESSION_COOKIE_SECURE=os.getenv('SESSION_COOKIE_SECURE', 'false').lower() == 'true',
+    PERMANENT_SESSION_LIFETIME=timedelta(hours=24),
+)
 _secret_key = os.getenv('SECRET_KEY')
 if not _secret_key:
     import secrets
     _secret_key = secrets.token_hex(32)
     print('⚠️ 未设置 SECRET_KEY，已生成临时会话密钥；重启后会话将失效，请在 .env 中配置固定密钥')
 app.secret_key = _secret_key
+
+
+from security_headers import set_security_headers
+
+
+@app.after_request
+def apply_security_headers(response):
+    """为所有响应补充基础安全响应头"""
+    return set_security_headers(response)
+
 
 # 创建数据库管理器实例
 db_manager = DatabaseManager()
