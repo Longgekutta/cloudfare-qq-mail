@@ -30,17 +30,13 @@ if not _secret_key:
 app.secret_key = _secret_key
 
 
+from security_headers import set_security_headers
+
+
 @app.after_request
-def set_security_headers(response):
+def apply_security_headers(response):
     """为所有响应补充基础安全响应头"""
-    response.headers['X-Content-Type-Options'] = 'nosniff'
-    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
-    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
-    response.headers['Permissions-Policy'] = (
-        'accelerometer=(), camera=(), geolocation=(), gyroscope=(), '
-        'magnetometer=(), microphone=(), payment=(), usb=()'
-    )
-    return response
+    return set_security_headers(response)
 
 
 # 创建数据库管理器实例
