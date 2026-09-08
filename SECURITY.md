@@ -1,15 +1,14 @@
-# 安全配置说明
+# 安全与生产加固说明
 
-## 会话 Cookie 安全
+## 登录表单防御性校验
+- 使用 request.form.get 读取 username/password，避免字段缺失导致 500。
+- 空用户名或空密码直接返回 400，防止无意义数据库查询和潜在绕过。
 
-- `SESSION_COOKIE_HTTPONLY=True`：禁止 JavaScript 读取会话 Cookie，降低 XSS 后会话窃取风险。
-- `SESSION_COOKIE_SAMESITE='Lax'`：限制跨站携带 Cookie，降低 CSRF 风险。
-- `SESSION_COOKIE_SECURE`：仅在显式设置环境变量 `SESSION_COOKIE_SECURE=true` 时启用，要求 Cookie 仅通过 HTTPS 传输。
-- `PERMANENT_SESSION_LIFETIME`：会话最长有效期为 24 小时。
+## 全局错误处理
+- 500：记录完整堆栈到应用日志，对外仅返回通用错误信息；根据 Accept 头返回 JSON 或纯文本。
+- 404：统一返回资源不存在信息，避免暴露路径细节。
 
-## 基础安全响应头
-
-- `X-Content-Type-Options: nosniff`：禁止浏览器猜测 MIME 类型。
-- `X-Frame-Options: SAMEORIGIN`：仅允许同源嵌入页面，降低点击劫持风险。
-- `Referrer-Policy: strict-origin-when-cross-origin`：控制 Referer 信息泄露。
-- `Permissions-Policy`：关闭不必要的浏览器能力。
+## 生产部署建议
+- 生产环境必须关闭 Flask debug，避免 Werkzeug 调试页绕过错误处理器。
+- 建议通过 logging 配置将日志输出到文件或集中日志系统。
+- 登录接口已结合限流模块，建议配合反向代理进一步限制异常流量。

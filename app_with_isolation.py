@@ -7,6 +7,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, j
 import os
 import sys
 from datetime import timedelta
+from rate_limit import rate_limit
 
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -39,6 +40,27 @@ def apply_security_headers(response):
     return set_security_headers(response)
 
 
+import logging
+from flask import jsonify
+
+logger = logging.getLogger(__name__)
+
+@app.errorhandler(500)
+def handle_500_error(error):
+    """全局500错误处理，防止生产环境泄露敏感堆栈信息"""
+    logger.error(f"Unhandled Exception: {error}", exc_info=True)
+    if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
+        return jsonify({"error": "Internal Server Error", "message": "An unexpected error occurred."}), 500
+    return "Internal Server Error: An unexpected error occurred. Please contact the administrator.", 500
+
+@app.errorhandler(404)
+def handle_404_error(error):
+    """全局404错误处理"""
+    if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
+        return jsonify({"error": "Not Found", "message": "The requested resource was not found."}), 404
+    return "Not Found: The requested resource was not found.", 404
+
+
 # 创建数据库管理器实例
 db_manager = DatabaseManager()
 
@@ -66,14 +88,19 @@ def index():
 
 # 登录页面路由
 @app.route('/login', methods=['GET', 'POST'])
+@rate_limit(max_requests=10, window_seconds=60, methods=('POST',))
 def login():
     """
     登录页面视图函数
     """
     if request.method == 'POST':
         # 处理登录表单提交
-        username = request.form['username']
-        password = request.form['password']
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+        
+        # 防御性校验：拒绝空用户名/密码，避免无意义查询和潜在绕过
+        if not username or not password:
+            return render_template('login.html', error='用户名和密码不能为空'), 400
         
         # 验证用户名和密码
         user = None
