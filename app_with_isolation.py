@@ -7,6 +7,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, j
 import os
 import sys
 from datetime import timedelta
+from rate_limit import rate_limit
 
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -66,6 +67,7 @@ def index():
 
 # 登录页面路由
 @app.route('/login', methods=['GET', 'POST'])
+@rate_limit(max_requests=10, window_seconds=60, methods=('POST',))
 def login():
     """
     登录页面视图函数
