@@ -17,7 +17,7 @@ echo ""
 # 3. 检查最近的Docker构建日志
 echo "🔨 3. Docker构建日志（最近的错误）："
 # 检查失败的构建
-if docker images | grep -q "cloudfare-qq-mail"; then
+if docker images | grep -q "app-cloudfare-qq-mail"; then
     echo "✅ 找到构建的镜像"
     docker images | grep cloudfare-qq-mail
 else

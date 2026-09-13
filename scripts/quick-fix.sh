@@ -5,7 +5,7 @@ echo "🔧 快速修复和诊断脚本"
 echo "=================================="
 
 # 进入项目目录
-if [[ -d "cloudfare-qq-mail" ]]; then
+if [[ -d "app-cloudfare-qq-mail" ]]; then
     cd cloudfare-qq-mail
     echo "✅ 已进入项目目录"
 else

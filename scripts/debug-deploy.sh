@@ -7,7 +7,7 @@ echo "=================================="
 # 检查是否在项目目录中
 if [[ -f "app.py" && -f "docker-compose.yml" ]] || [[ -f "app.py" && -f "docker-compose.tencent.yml" ]]; then
     echo "✅ 已在项目目录中: $(pwd)"
-elif [[ -d "cloudfare-qq-mail" ]]; then
+elif [[ -d "app-cloudfare-qq-mail" ]]; then
     cd cloudfare-qq-mail
     echo "✅ 进入项目目录: $(pwd)"
 else

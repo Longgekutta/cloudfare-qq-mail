@@ -17,9 +17,9 @@ USE_PREBUILT_IMAGE=${USE_PREBUILT_IMAGE:-false}
 SKIP_DOCKER_INSTALL=${SKIP_DOCKER_INSTALL:-false}
 
 # 项目信息
-readonly PROJECT_NAME="cloudfare-qq-mail"
-readonly GITHUB_REPO="https://github.com/Longgekutta/cloudfare-qq-mail.git"
-readonly GITEE_REPO="https://gitee.com/longgekutta/cloudfare-qq-mail.git"
+readonly PROJECT_NAME="app-cloudfare-qq-mail"
+readonly GITHUB_REPO="https://github.com/Longgekutta/app-cloudfare-qq-mail.git"
+readonly GITEE_REPO="https://gitee.com/longgekutta/app-cloudfare-qq-mail.git"
 readonly DOCKER_IMAGE="longgekutta/cloudfare-qq-mail:latest"
 readonly VERSION="v3.0-ultimate"
 
@@ -321,7 +321,7 @@ get_project_code() {
     log WARNING "Git克隆失败，尝试下载ZIP文件..."
     
     local zip_urls=(
-        "https://gitee.com/longgekutta/cloudfare-qq-mail/repository/archive/main.zip"
+        "https://gitee.com/longgekutta/app-cloudfare-qq-mail/repository/archive/main.zip"
         "https://github.com/Longgekutta/cloudfare-qq-mail/archive/main.zip"
     )
     
@@ -364,7 +364,7 @@ get_project_code() {
     echo "   ping -c 3 github.com"
     echo ""
     echo "2. 手动下载并解压:"
-    echo "   wget https://gitee.com/longgekutta/cloudfare-qq-mail/repository/archive/main.zip"
+    echo "   wget https://gitee.com/longgekutta/app-cloudfare-qq-mail/repository/archive/main.zip"
     echo "   unzip main.zip && mv cloudfare-qq-mail-* cloudfare-qq-mail && cd cloudfare-qq-mail"
     echo ""
     echo "3. 然后运行本地部署:"
@@ -948,7 +948,7 @@ show_help() {
 项目信息:
   GitHub:    https://github.com/Longgekutta/cloudfare-qq-mail
   DockerHub: https://hub.docker.com/r/longgekutta/cloudfare-qq-mail
-  Gitee:     https://gitee.com/longgekutta/cloudfare-qq-mail
+  Gitee:     https://gitee.com/longgekutta/app-cloudfare-qq-mail
 
 EOF
 }
